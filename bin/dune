@@ -1,0 +1,4 @@
+(executable
+ (public_name chip8)
+ (name main)
+ (libraries chip8))
