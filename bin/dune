@@ -1,4 +1,12 @@
 (executable
  (public_name chip8)
  (name main)
- (libraries chip8))
+ (modules main)
+ (libraries
+  chip8
+  tsdl))
+
+(executable
+ (name disassembler)
+ (modules disassembler)
+ (libraries chip8 stdint))
