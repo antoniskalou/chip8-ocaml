@@ -90,7 +90,7 @@ module Cpu = struct
 
   let screen_buffer t = t.screen
 
-  let fetch t memory =
+  let fetch (t: t) memory =
     let opcode = Memory.read_uint16 memory ~pos:t.pc in
     (* always increment the program counter, later on we can decide if we want
       to skip or jump. *)
@@ -123,12 +123,40 @@ module Cpu = struct
       let opcode_str = Printf.sprintf "0x%04X" (Uint16.to_int opcode) in
       raise (Unknown_opcode (opcode_str, opcode))
 
-  let execute instruction = ()
+  let execute t memory instruction =
+    match instruction with
+    | Clear -> Array.fill t.screen 0 (Array.length t.screen) false
+    | Set (vx, x) ->
+      t.registers.(Uint8.to_int vx) <- x
+    | Set_index (i) ->
+      t.i <- i
+    | Draw (vx, vy, rows) ->
+      t.registers.(0xF) <- Uint8.zero;
+      for y = 0 to Uint8.to_int rows - 1 do
+        let line =
+          Memory.read_uint8 memory ~pos:Uint16.(t.i + of_int y)
+          |> Uint8.to_int
+        in
+        for x = 0 to 7 do
+          let bit = (line lsr (7 - x)) land (0b00000001) = 1 in
+          let screen_idx = ((y + Uint8.to_int vy) mod 32) * 64 + (x + (Uint8.to_int vx mod 64)) in
+          if bit && t.screen.(screen_idx) then begin
+            t.screen.(screen_idx) <- false;
+            t.registers.(0xF) <- Uint8.one;
+          end else if bit then
+            t.screen.(screen_idx) <- true
+        done
+      done;
+      ()
+    | Jump tgt -> t.pc <- tgt
+    | Return -> failwith "TODO"
+    | Jump0 _ -> failwith "TODO"
+    | Call _ -> failwith "TODO"
 
   let tick t memory =
     fetch t memory
     |> decode
-    |> execute
+    |> execute t memory
 end
 
 let or_exit = function
@@ -183,6 +211,7 @@ let () =
   let last_tick = ref 0. in
   while true do
     if (Unix.gettimeofday () -. !last_tick) >= threshold then begin
+      Cpu.tick cpu memory;
       clear_graphics renderer;
       draw_graphics (Cpu.screen_buffer cpu) renderer;
       handle_event ();

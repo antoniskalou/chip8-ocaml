@@ -54,7 +54,7 @@ let string_of_opcode opcode =
   | (0xA, n1, n2, n3) -> Printf.sprintf "I := %s" (nnn_to_string n1 n2 n3)
   | (0xB, n1, n2, n3) -> Printf.sprintf "JUMP0 %s" (nnn_to_string n1 n2 n3)
   | (0xC, x, n1, n2) -> Printf.sprintf "V%i := RANDOM %s" x (nn_to_string n1 n2)
-  | (0xD, x, y, n) -> Printf.sprintf "DRAW V%i V%i %X" x y n
+  | (0xD, x, y, n) -> Printf.sprintf "DRAW V%i V%i %i" x y n
   | (0xE, x, 0x9, 0xE) -> Printf.sprintf "IF V%i -KEY THEN" x
   | (0xE, x, 0xA, 0x1) -> Printf.sprintf "IF V%i KEY THEN" x
   | (0xF, x, 0x0, 0x7) -> Printf.sprintf "V%i := DELAY" x
