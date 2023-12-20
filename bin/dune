@@ -4,9 +4,14 @@
  (modules main)
  (libraries
   chip8
+  stdint
   tsdl))
 
 (executable
  (name disassembler)
  (modules disassembler)
  (libraries chip8 stdint))
+
+(env
+  (dev
+    (flags (:standard -warn-error -A))))
