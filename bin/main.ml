@@ -125,12 +125,16 @@ module Cpu = struct
 
   let execute t memory instruction =
     match instruction with
-    | Clear -> Array.fill t.screen 0 (Array.length t.screen) false
+    | Clear -> Printf.eprintf "CLEAR\n"; Array.fill t.screen 0 (Array.length t.screen) false
     | Set (vx, x) ->
+      Printf.eprintf "V%i := %02X\n" (Uint8.to_int vx) (Uint8.to_int x);
       t.registers.(Uint8.to_int vx) <- x
     | Set_index (i) ->
+      Printf.eprintf "I := %02X\n" (Uint16.to_int i);
       t.i <- i
     | Draw (vx, vy, rows) ->
+      Printf.eprintf "DRAW vx=V%i vy=V%i n=V%i\n"
+        (Uint8.to_int vx) (Uint8.to_int vy) (Uint8.to_int rows);
       t.registers.(0xF) <- Uint8.zero;
       for y = 0 to Uint8.to_int rows - 1 do
         let line =
@@ -214,7 +218,9 @@ let () =
       Cpu.tick cpu memory;
       clear_graphics renderer;
       draw_graphics (Cpu.screen_buffer cpu) renderer;
-      handle_event ();
       last_tick := Unix.gettimeofday ()
-    end
+    end;
+    (* handle events outside of timed loop as to not miss any events that
+       may happen while the timed cycle is waiting *)
+    handle_event ()
   done
