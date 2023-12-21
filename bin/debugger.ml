@@ -8,7 +8,7 @@ let prompt s =
 type cmd =
   | Run
   | Step
-  | List of uint16 option
+  | List_code of uint16 option
   | Memset of uint16 * uint16
   (* | Breakpoint of uint16 *)
   | Print_registers
@@ -17,9 +17,9 @@ let parse_command cmd_str =
   match String.split_on_char ' ' cmd_str with
   | ["r"] | ["run"] -> Some Run
   | ["s"] | ["step"] -> Some Step
-  | ["l"] | ["list"] -> Some (List None)
-  | ["l"; pc] | ["list"; pc] ->
-    Some (List (Some (Uint16.of_string pc)))
+  | ["l"] | ["list"] -> Some (List_code None)
+  | ["l"; look_at] | ["list"; look_at] ->
+    Some (List_code (Some (Uint16.of_string look_at)))
   | ["p"] | ["print"] -> Some Print_registers
   | ["memset"; addr; value] ->
     (* TODO: handle errors *)
@@ -33,21 +33,21 @@ let run_until_breakpoint cpu =
 
 let step_execution = Cpu.tick
 
-let list_code ~(pc: uint16) ~memory =
-  let pc = Uint16.to_int pc in
+let list_code ~(look_at: uint16) ~(pc: uint16) ~memory =
+  let look_at = Uint16.to_int look_at in
   (* number of opcodes to traverse, x2 because its 16 bit *)
   let n_opcodes = 5 * 2 in
-  let distance_finish = Memory.size memory - pc in
+  let distance_finish = Memory.size memory - look_at in
   let (start, finish) =
     (* we're at the start so we can't go backward, show 10 forward instead *)
-    if pc < n_opcodes then
+    if look_at < n_opcodes then
       (* reduce effect of looking backwards as we move up the rom *)
-      (pc, (pc + n_opcodes * 2) - pc)
+      (look_at, (look_at + n_opcodes * 2) - look_at)
     (* we're at the end of memory, go 10 backward *)
     else if distance_finish < n_opcodes then
-      (pc - n_opcodes * 2, pc - distance_finish)
+      (look_at - n_opcodes * 2, look_at - distance_finish)
     (* we can view memory both forward and backward *)
-    else (pc - n_opcodes, pc + n_opcodes)
+    else (look_at - n_opcodes, look_at + n_opcodes)
   in
   let i = ref start in
   while !i < finish do
@@ -56,7 +56,7 @@ let list_code ~(pc: uint16) ~memory =
     |> Uint16.to_int
     |> Printf.printf "%04X: %04X" !i;
     (* show where we are in execution *)
-    if !i = pc then begin
+    if !i = (Uint16.to_int pc) then begin
       Printf.printf " <--"
     end;
     Printf.printf "\n%!";
@@ -76,9 +76,9 @@ let execute_command ~cpu =
   function
   | Run -> run_until_breakpoint cpu
   | Step -> step_execution cpu
-  | List pc_opt ->
-    let pc = Option.value ~default:cpu.pc pc_opt in
-    list_code ~pc ~memory:cpu.memory
+  | List_code look_at_opt ->
+    let look_at = Option.value ~default:cpu.pc look_at_opt in
+    list_code ~look_at ~pc:cpu.pc ~memory:cpu.memory
   | Print_registers -> print_registers cpu
   | Memset (addr, value) ->
     set_value_in_memory ~memory:cpu.memory addr value
