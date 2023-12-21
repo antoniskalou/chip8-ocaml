@@ -163,13 +163,21 @@ module Cpu = struct
     |> execute t
 end
 
+let threshold = 1. /. 360.
+let render_scale = 20
+
 let or_exit = function
   | Error (`Msg e) -> Sdl.log "%s" e; exit 1
   | Ok x -> x
 
 let init_graphics () =
   Sdl.init Sdl.Init.(video + events) |> or_exit;
-  let w = Sdl.create_window ~w:640 ~h:320 "Chip8 (Vulkan)" Sdl.Window.vulkan |> or_exit in
+  let w =
+    Sdl.create_window
+      ~w:(64 * render_scale) ~h:(32 * render_scale)
+      "Chip8 (Vulkan)" Sdl.Window.vulkan
+    |> or_exit
+  in
   let renderer = Sdl.create_renderer w ~index:(-1) |> or_exit in
   Sdl.set_render_draw_color renderer 0xFF 0xFF 0xFF 0xFF |> or_exit;
   renderer
@@ -184,9 +192,9 @@ let draw_graphics buffer renderer =
     if b then begin
       (* there are probably more efficient ways to do this rather
          than creating a rect per pixel*)
-      let x = 10 * (i mod 64) in
-      let y = 10 * (i / 64) in
-      let rect = Sdl.Rect.create ~x ~y ~w:10 ~h:10 in
+      let x = render_scale * (i mod 64) in
+      let y = render_scale * (i / 64) in
+      let rect = Sdl.Rect.create ~x ~y ~w:render_scale ~h:render_scale in
       Sdl.render_fill_rect renderer (Some rect) |> or_exit
     end);
   Sdl.render_present renderer
@@ -198,8 +206,6 @@ let handle_event () =
     | `Quit -> exit 0
     | _ -> ()
   end
-
-let threshold = 1. /. 360.
 
 let () =
   let argv = Sys.argv in
