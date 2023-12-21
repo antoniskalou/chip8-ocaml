@@ -40,6 +40,7 @@ type instruction =
 | Return
 | Set of register * uint8
 | Set_index of uint16
+| Add of register * uint8
 | Jump of uint16
 | Jump0 of uint16
 | Call of uint16
@@ -52,6 +53,7 @@ let decode opcode =
   | (0x1, n1, n2, n3) -> Jump (Nibbles.to_uint16 n1 n2 n3)
   | (0x2, n1, n2, n3) -> Call (Nibbles.to_uint16 n1 n2 n3)
   | (0x6, x, n1, n2) -> Set (Uint8.of_int x, Nibbles.to_uint8 n1 n2)
+  | (0x7, x, n1, n2) -> Add (Uint8.of_int x, Nibbles.to_uint8 n1 n2)
   | (0xA, n1, n2, n3) -> Set_index (Nibbles.to_uint16 n1 n2 n3)
   | (0xB, n1, n2, n3) -> Jump0 (Nibbles.to_uint16 n1 n2 n3)
   | (0xD, x, y, n) -> Draw (Uint8.of_int x, Uint8.of_int y, Uint8.of_int n)
@@ -66,6 +68,9 @@ let execute t instruction =
     t.registers.(Uint8.to_int vx) <- x
   | Set_index (i) ->
     t.i <- i
+  | Add (vx, x) ->
+    let vx' = t.registers.(Uint8.to_int vx) in
+    t.registers.(Uint8.to_int vx) <- Uint8.(x + vx')
   | Draw (vx, vy, rows) ->
     let vx = t.registers.(Uint8.to_int vx) |> Uint8.to_int in
     let vy = t.registers.(Uint8.to_int vy) |> Uint8.to_int in
