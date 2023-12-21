@@ -77,7 +77,7 @@ let step_execution = Cpu.tick
 let print_registers (cpu: Cpu.t) =
   cpu.registers
   |> Array.iteri (fun i r ->
-      Printf.printf "V%i = %02X\n%!" i (Uint8.to_int r));
+      Printf.printf "V%X = %02X\n%!" i (Uint8.to_int r));
   Printf.printf "I = %04X\n%!" (Uint16.to_int cpu.i);
   Printf.printf "SP = %04X\n%!" (Uint16.to_int cpu.sp)
 
