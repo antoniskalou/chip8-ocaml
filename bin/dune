@@ -14,4 +14,7 @@
 
 (env
   (dev
-    (flags (:standard -warn-error -A))))
+    (flags (:standard -warn-error -A)))
+  (release
+    (ocamlopt_flags
+     (:standard -O2 -ccopt -static -ccopt -s))))

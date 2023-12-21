@@ -1,37 +1,19 @@
 open Stdint
-
-let uint8_of_nibbles (n1: int) (n2: int): uint8 =
-  Uint8.of_int ((n1 lsl 4) + n2)
-
-let uint16_of_nibbles (n1: int) (n2: int) (n3: int): uint16 =
-  Uint16.of_int ((n1 lsl 8) + (n2 lsl 4) + n3)
-
-let nibbles_of_uint16 (x : uint16) : int * int * int * int =
-  let x = Uint16.to_int x in
-  (
-    (* x >> 12 *)
-    x lsr 12,
-    (* (0x0F00 & x) >> 8 *)
-    (0x0F00 land x) lsr 8,
-    (* (0x00F0 & x) >> 4 *)
-    (0x00F0 land x) lsr 4,
-    (* 0x000F & x *)
-    0x000F land x
-  )
+open Chip8
 
 let string_of_opcode opcode =
   let nn_to_string n1 n2 =
-    uint8_of_nibbles n1 n2
+    Nibbles.to_uint8 n1 n2
     |> Uint8.to_int
     |> Printf.sprintf "%X"
   in
   let nnn_to_string n1 n2 n3 =
-    uint16_of_nibbles n1 n2 n3
+    Nibbles.to_uint16 n1 n2 n3
     |> Uint16.to_int
     |> Printf.sprintf "%X"
   in
   (* see http://johnearnest.github.io/Octo/docs/chip8ref.pdf *)
-  match nibbles_of_uint16 opcode with
+  match Nibbles.of_uint16 opcode with
   | (0x0, 0x0, 0xE, 0x0) -> "CLEAR"
   | (0x0, 0x0, 0xE, 0xE) -> "RETURN"
   | (0x1, n1, n2, n3) -> Printf.sprintf "JUMP %s" (nnn_to_string n1 n2 n3)
@@ -75,10 +57,7 @@ let () =
     Printf.eprintf "Usage: %s <ROM FILE>\n" Sys.executable_name;
     exit 2
   end;
-  let rom =
-    In_channel.with_open_bin argv.(1) In_channel.input_all
-    |> Bytes.of_string
-  in
+  let rom = Rom.load argv.(1) in
   let pc = ref 0 in
   while !pc < (Bytes.length rom) - 2 do
     let (b1, b2) = (Bytes.get_uint8 rom !pc, Bytes.get_uint8 rom (!pc + 1)) in
