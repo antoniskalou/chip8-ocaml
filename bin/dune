@@ -12,6 +12,11 @@
  (modules disassembler)
  (libraries chip8 stdint))
 
+(executable
+ (name debugger)
+ (modules debugger)
+ (libraries chip8))
+
 (env
   (dev
     (flags (:standard -warn-error -A)))
