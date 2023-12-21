@@ -40,7 +40,9 @@ type instruction =
 | Return
 | Set of register * uint8
 | Set_index of uint16
+| Set_vx_to_vy of register * register
 | Add of register * uint8
+| Binary_or of register * register
 | Jump of uint16
 | Jump0 of uint16
 | Call of uint16
@@ -61,6 +63,8 @@ let decode opcode =
   | (0x5, x, y, 0x0) -> Skip_if_vx_vy_eq (Uint8.of_int x, Uint8.of_int y)
   | (0x6, x, n1, n2) -> Set (Uint8.of_int x, Nibbles.to_uint8 n1 n2)
   | (0x7, x, n1, n2) -> Add (Uint8.of_int x, Nibbles.to_uint8 n1 n2)
+  | (0x8, x, y, 0x0) -> Set_vx_to_vy (Uint8.of_int x, Uint8.of_int y)
+  | (0x8, x, y, 0x1) -> Binary_or (Uint8.of_int x, Uint8.of_int y)
   | (0x9, x, y, 0x0) -> Skip_if_vx_vy_ne (Uint8.of_int x, Uint8.of_int y)
   | (0xA, n1, n2, n3) -> Set_index (Nibbles.to_uint16 n1 n2 n3)
   | (0xB, n1, n2, n3) -> Jump0 (Nibbles.to_uint16 n1 n2 n3)
@@ -73,35 +77,42 @@ let execute t instruction =
   let skip () = t.pc <- Uint16.(t.pc + of_int 2) in
   match instruction with
   | Clear -> Array.fill t.screen 0 (Array.length t.screen) false
-  | Set (vx, x) ->
-    t.registers.(Uint8.to_int vx) <- x
+  | Set (vx, value) ->
+    t.registers.(Uint8.to_int vx) <- value
   | Set_index (i) ->
     t.i <- i
-  | Add (vx, x) ->
-    let vx' = t.registers.(Uint8.to_int vx) in
-    t.registers.(Uint8.to_int vx) <- Uint8.(x + vx')
+  | Set_vx_to_vy (vx, vy) ->
+    let y = t.registers.(Uint8.to_int vy) in
+    t.registers.(Uint8.to_int vx) <- y
+  | Add (vx, value) ->
+    let x = t.registers.(Uint8.to_int vx) in
+    t.registers.(Uint8.to_int vx) <- Uint8.(x + value)
+  | Binary_or (vx, vy) ->
+    let x = t.registers.(Uint8.to_int vx) in
+    let y = t.registers.(Uint8.to_int vy) in
+    t.registers.(Uint8.to_int vx) <- Uint8.logor x y;
   | Draw (vx, vy, rows) ->
-    let vx = t.registers.(Uint8.to_int vx) |> Uint8.to_int in
-    let vy = t.registers.(Uint8.to_int vy) |> Uint8.to_int in
+    let x = t.registers.(Uint8.to_int vx) |> Uint8.to_int in
+    let y = t.registers.(Uint8.to_int vy) |> Uint8.to_int in
     let f_flag =
-      Screen.draw t.screen ~memory:t.memory ~i:t.i ~vx ~vy ~rows
+      Screen.draw t.screen ~memory:t.memory ~i:t.i ~vx:x ~vy:y ~rows
     in
     t.registers.(0xF) <- f_flag;
   | Jump tgt -> t.pc <- tgt
-  | Skip_if_eq (vx, x) ->
-    let vx = t.registers.(Uint8.to_int vx) in
-    if vx = x then skip () else ()
-  | Skip_if_ne (vx, x) ->
-    let vx = t.registers.(Uint8.to_int vx) in
-    if vx != x then skip () else ()
+  | Skip_if_eq (vx, value) ->
+    let x = t.registers.(Uint8.to_int vx) in
+    if x = value then skip () else ()
+  | Skip_if_ne (vx, value) ->
+    let x = t.registers.(Uint8.to_int vx) in
+    if x != value then skip () else ()
   | Skip_if_vx_vy_eq (vx, vy) ->
-    let vx = t.registers.(Uint8.to_int vx) in
-    let vy = t.registers.(Uint8.to_int vy) in
-    if vx = vy then skip () else ()
+    let x = t.registers.(Uint8.to_int vx) in
+    let y = t.registers.(Uint8.to_int vy) in
+    if x = y then skip () else ()
   | Skip_if_vx_vy_ne (vx, vy) ->
-    let vx = t.registers.(Uint8.to_int vx) in
-    let vy = t.registers.(Uint8.to_int vy) in
-    if vx != vy then skip () else ()
+    let x = t.registers.(Uint8.to_int vx) in
+    let y = t.registers.(Uint8.to_int vy) in
+    if x != y then skip () else ()
   | Call addr ->
     t.sp <- Uint16.(t.sp + of_int 2);
     Memory.write_uint16 t.memory ~pos:t.sp t.pc;
