@@ -9,16 +9,19 @@ type cmd =
   | Run
   | Step
   | List
+  | Memset of uint16 * uint16
   (* | Breakpoint of uint16 *)
   | Print_registers
 
 let parse_command cmd_str =
-  match cmd_str with
-  | "r" | "run" -> Some Run
-  | "s" | "step" -> Some Step
-  | "l" | "list" -> Some List
-  (* | "b" | "break" -> Some (Breakpoint) *)
-  | "p" | "print" -> Some Print_registers
+  match String.split_on_char ' ' cmd_str with
+  | ["r"] | ["run"] -> Some Run
+  | ["s"] | ["step"] -> Some Step
+  | ["l"] | ["list"] -> Some List
+  | ["p"] | ["print"] -> Some Print_registers
+  | ["memset"; addr; value] ->
+    (* TODO: handle errors *)
+    Some (Memset (Uint16.of_string addr, Uint16.of_string value))
   | _ -> None
 
 let run_until_breakpoint cpu =
@@ -65,12 +68,17 @@ let print_registers (cpu: Cpu.t) =
       Printf.printf "V%i = %02X\n%!" i (Uint8.to_int r));
   Printf.printf "I = %04X\n%!" (Uint16.to_int cpu.i)
 
+let set_value_in_memory ~memory (addr: uint16) (value: uint16) =
+  Memory.write_uint16 memory ~pos:addr value
+
 let execute_command ~cpu =
   function
   | Run -> run_until_breakpoint cpu
   | Step -> step_execution cpu
   | List -> list_code ~pc:cpu.pc ~memory:cpu.memory
   | Print_registers -> print_registers cpu
+  | Memset (addr, value) ->
+    set_value_in_memory ~memory:cpu.memory addr value
 
 let () =
   let argv = Sys.argv in
