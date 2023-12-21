@@ -8,7 +8,7 @@ let prompt s =
 type cmd =
   | Run
   | Step
-  | List
+  | List of uint16 option
   | Memset of uint16 * uint16
   (* | Breakpoint of uint16 *)
   | Print_registers
@@ -17,7 +17,9 @@ let parse_command cmd_str =
   match String.split_on_char ' ' cmd_str with
   | ["r"] | ["run"] -> Some Run
   | ["s"] | ["step"] -> Some Step
-  | ["l"] | ["list"] -> Some List
+  | ["l"] | ["list"] -> Some (List None)
+  | ["l"; pc] | ["list"; pc] ->
+    Some (List (Some (Uint16.of_string pc)))
   | ["p"] | ["print"] -> Some Print_registers
   | ["memset"; addr; value] ->
     (* TODO: handle errors *)
@@ -35,13 +37,12 @@ let list_code ~(pc: uint16) ~memory =
   let pc = Uint16.to_int pc in
   (* number of opcodes to traverse, x2 because its 16 bit *)
   let n_opcodes = 5 * 2 in
-  let distance_start = pc - Uint16.to_int Memory.rom_base_address in
   let distance_finish = Memory.size memory - pc in
   let (start, finish) =
     (* we're at the start so we can't go backward, show 10 forward instead *)
-    if distance_start < n_opcodes then
+    if pc < n_opcodes then
       (* reduce effect of looking backwards as we move up the rom *)
-      (pc - distance_start, (pc + n_opcodes * 2) - distance_start)
+      (pc, (pc + n_opcodes * 2) - pc)
     (* we're at the end of memory, go 10 backward *)
     else if distance_finish < n_opcodes then
       (pc - n_opcodes * 2, pc - distance_finish)
@@ -75,7 +76,9 @@ let execute_command ~cpu =
   function
   | Run -> run_until_breakpoint cpu
   | Step -> step_execution cpu
-  | List -> list_code ~pc:cpu.pc ~memory:cpu.memory
+  | List pc_opt ->
+    let pc = Option.value ~default:cpu.pc pc_opt in
+    list_code ~pc ~memory:cpu.memory
   | Print_registers -> print_registers cpu
   | Memset (addr, value) ->
     set_value_in_memory ~memory:cpu.memory addr value
