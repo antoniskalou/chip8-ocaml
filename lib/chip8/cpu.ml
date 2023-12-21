@@ -102,12 +102,15 @@ let execute t instruction =
     let vx = t.registers.(Uint8.to_int vx) in
     let vy = t.registers.(Uint8.to_int vy) in
     if vx != vy then skip () else ()
-  | Call pos ->
-    Memory.write_uint16 t.memory t.sp ~pos;
+  | Call addr ->
     t.sp <- Uint16.(t.sp + of_int 2);
-    t.pc <- pos
+    Memory.write_uint16 t.memory ~pos:t.sp t.pc;
+    t.pc <- addr
+  | Return ->
+    let addr = Memory.read_uint16 t.memory ~pos:t.sp in
+    t.sp <- Uint16.(t.sp - of_int 2);
+    t.pc <- addr
   | Jump0 _ -> failwith "Jump0"
-  | Return -> failwith "Return"
 
 let tick t =
   fetch t
