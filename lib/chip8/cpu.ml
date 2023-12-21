@@ -44,6 +44,10 @@ type instruction =
 | Jump of uint16
 | Jump0 of uint16
 | Call of uint16
+| Skip_if_eq of register * uint8
+| Skip_if_ne of register * uint8
+| Skip_if_vx_vy_eq of register * register
+| Skip_if_vx_vy_ne of register * register
 | Draw of register * register * uint8
 
 let decode opcode =
@@ -52,8 +56,12 @@ let decode opcode =
   | (0x0, 0x0, 0xE, 0xE) -> Return
   | (0x1, n1, n2, n3) -> Jump (Nibbles.to_uint16 n1 n2 n3)
   | (0x2, n1, n2, n3) -> Call (Nibbles.to_uint16 n1 n2 n3)
+  | (0x3, x, n1, n2) -> Skip_if_eq (Uint8.of_int x, Nibbles.to_uint8 n1 n2)
+  | (0x4, x, n1, n2) -> Skip_if_ne (Uint8.of_int x, Nibbles.to_uint8 n1 n2)
+  | (0x5, x, y, 0x0) -> Skip_if_vx_vy_eq (Uint8.of_int x, Uint8.of_int y)
   | (0x6, x, n1, n2) -> Set (Uint8.of_int x, Nibbles.to_uint8 n1 n2)
   | (0x7, x, n1, n2) -> Add (Uint8.of_int x, Nibbles.to_uint8 n1 n2)
+  | (0x9, x, y, 0x0) -> Skip_if_vx_vy_ne (Uint8.of_int x, Uint8.of_int y)
   | (0xA, n1, n2, n3) -> Set_index (Nibbles.to_uint16 n1 n2 n3)
   | (0xB, n1, n2, n3) -> Jump0 (Nibbles.to_uint16 n1 n2 n3)
   | (0xD, x, y, n) -> Draw (Uint8.of_int x, Uint8.of_int y, Uint8.of_int n)
@@ -62,6 +70,7 @@ let decode opcode =
     raise (Unknown_opcode (opcode_str, opcode))
 
 let execute t instruction =
+  let skip () = t.pc <- Uint16.(t.pc + of_int 2) in
   match instruction with
   | Clear -> Array.fill t.screen 0 (Array.length t.screen) false
   | Set (vx, x) ->
@@ -79,9 +88,26 @@ let execute t instruction =
     in
     t.registers.(0xF) <- f_flag;
   | Jump tgt -> t.pc <- tgt
-  | Return -> failwith "TODO"
-  | Jump0 _ -> failwith "TODO"
-  | Call _ -> failwith "TODO"
+  | Skip_if_eq (vx, x) ->
+    let vx = t.registers.(Uint8.to_int vx) in
+    if vx = x then skip () else ()
+  | Skip_if_ne (vx, x) ->
+    let vx = t.registers.(Uint8.to_int vx) in
+    if vx != x then skip () else ()
+  | Skip_if_vx_vy_eq (vx, vy) ->
+    let vx = t.registers.(Uint8.to_int vx) in
+    let vy = t.registers.(Uint8.to_int vy) in
+    if vx = vy then skip () else ()
+  | Skip_if_vx_vy_ne (vx, vy) ->
+    let vx = t.registers.(Uint8.to_int vx) in
+    let vy = t.registers.(Uint8.to_int vy) in
+    if vx != vy then skip () else ()
+  | Call pos ->
+    Memory.write_uint16 t.memory t.sp ~pos;
+    t.sp <- Uint16.(t.sp + of_int 2);
+    t.pc <- pos
+  | Jump0 _ -> failwith "Jump0"
+  | Return -> failwith "Return"
 
 let tick t =
   fetch t

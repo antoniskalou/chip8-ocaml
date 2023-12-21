@@ -20,7 +20,7 @@ type cmd =
 let parse_command cmd_str =
   match String.split_on_char ' ' cmd_str with
   | ["r"] | ["run"] -> Some Run
-  | ["s"] | ["step"] -> Some Step
+  | ["s"] | ["n"] | ["step"] -> Some Step
   | ["p"] | ["print"] -> Some Print_registers
   | ["l"] | ["list"] -> Some (List_code None)
   | ["l"; look_at] | ["list"; look_at] ->
