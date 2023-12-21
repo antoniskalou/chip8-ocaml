@@ -11,7 +11,6 @@ depends: [
   "ocaml" {>= "5.0.0"}
   "dune" {>= "3.12"}
   "stdint" {>= "0.7.2"}
-  "bigstringaf" {>= "0.9.1"}
   "tsdl" {>= "1.0.0"}
   "odoc" {with-doc}
 ]

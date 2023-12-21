@@ -23,7 +23,6 @@
   (ocaml (>= 5.0.0))
   dune
   (stdint (>= 0.7.2))
-  (bigstringaf (>= 0.9.1))
   (tsdl (>= 1.0.0))))
 
 ; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project
