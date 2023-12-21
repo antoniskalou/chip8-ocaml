@@ -10,7 +10,7 @@ type t =
   ; memory : Memory.t
   (* represents a render buffer, when true is encountered a pixel
       is drawn at that coordinate *)
-  ; screen : bool array
+  ; screen : Screen.t
   }
 
 let create memory =
@@ -20,11 +20,11 @@ let create memory =
   (* caml8 uses this address in our local memory, though we can use whatever
       stack-like structure we prefer. *)
   ; sp = Uint16.of_int 0xFA0
-  ; screen = Array.make (64 * 32) false
+  ; screen = Screen.create ~w:64 ~h:32
   ; memory
   }
 
-let screen_buffer t = t.screen
+let screen_buffer (t: t): bool array = Screen.buffer t.screen
 
 let fetch (t: t) =
   let opcode = Memory.read_uint16 t.memory ~pos:t.pc in
@@ -74,23 +74,10 @@ let execute t instruction =
   | Draw (vx, vy, rows) ->
     let vx = t.registers.(Uint8.to_int vx) |> Uint8.to_int in
     let vy = t.registers.(Uint8.to_int vy) |> Uint8.to_int in
-    t.registers.(0xF) <- Uint8.zero;
-    for y = 0 to Uint8.to_int rows - 1 do
-      let line =
-        Memory.read_uint8 t.memory ~pos:Uint16.(t.i + of_int y)
-        |> Uint8.to_int
-      in
-      for x = 0 to 7 do
-        let bit = (line lsr (7 - x)) land (0b00000001) = 1 in
-        let screen_idx = ((y + vy) mod 32) * 64 + (x + (vx mod 64)) in
-        if bit && t.screen.(screen_idx) then begin
-          t.screen.(screen_idx) <- false;
-          t.registers.(0xF) <- Uint8.one;
-        end else if bit then
-          t.screen.(screen_idx) <- true
-      done
-    done;
-    ()
+    let f_flag =
+      Screen.draw t.screen ~memory:t.memory ~i:t.i ~vx ~vy ~rows
+    in
+    t.registers.(0xF) <- f_flag;
   | Jump tgt -> t.pc <- tgt
   | Return -> failwith "TODO"
   | Jump0 _ -> failwith "TODO"
