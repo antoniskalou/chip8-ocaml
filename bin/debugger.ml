@@ -5,33 +5,34 @@ let prompt s =
   Printf.printf "%s %!" s;
   In_channel.input_line stdin
 
+type debug_state =
+  { mutable breakpoints : uint16 list }
+
 type cmd =
   | Run
   | Step
-  | List_code of uint16 option
+  | Breakpoint of uint16
   | Memset of uint16 * uint16
-  (* | Breakpoint of uint16 *)
+  | List_code of uint16 option
+  | List_breakpoints
   | Print_registers
 
 let parse_command cmd_str =
   match String.split_on_char ' ' cmd_str with
   | ["r"] | ["run"] -> Some Run
   | ["s"] | ["step"] -> Some Step
+  | ["p"] | ["print"] -> Some Print_registers
   | ["l"] | ["list"] -> Some (List_code None)
   | ["l"; look_at] | ["list"; look_at] ->
     Some (List_code (Some (Uint16.of_string look_at)))
-  | ["p"] | ["print"] -> Some Print_registers
+  | ["b"] | ["break"] ->
+    Some List_breakpoints
+  | ["b"; addr] | ["break"; addr] ->
+    Some (Breakpoint (Uint16.of_string addr))
   | ["memset"; addr; value] ->
     (* TODO: handle errors *)
     Some (Memset (Uint16.of_string addr, Uint16.of_string value))
   | _ -> None
-
-let run_until_breakpoint cpu =
-  while true do
-    Cpu.tick cpu
-  done
-
-let step_execution = Cpu.tick
 
 let list_code ~(look_at: uint16) ~(pc: uint16) ~memory =
   let look_at = Uint16.to_int look_at in
@@ -63,6 +64,16 @@ let list_code ~(look_at: uint16) ~(pc: uint16) ~memory =
     i := !i + 2
   done
 
+let rec run_until_breakpoint ~(cpu: Cpu.t) ~debug_state =
+  if List.exists (fun b -> b = cpu.pc) debug_state.breakpoints
+  then Printf.printf "Breakpoint reached.\n%!"
+  else begin
+    Cpu.tick cpu;
+    run_until_breakpoint ~cpu ~debug_state
+  end
+
+let step_execution = Cpu.tick
+
 let print_registers (cpu: Cpu.t) =
   cpu.registers
   |> Array.iteri (fun i r ->
@@ -72,14 +83,26 @@ let print_registers (cpu: Cpu.t) =
 let set_value_in_memory ~memory (addr: uint16) (value: uint16) =
   Memory.write_uint16 memory ~pos:addr value
 
-let execute_command ~cpu =
+let execute_command ~cpu ~debug_state =
   function
-  | Run -> run_until_breakpoint cpu
+  | Run -> run_until_breakpoint ~cpu ~debug_state
   | Step -> step_execution cpu
+  | Print_registers -> print_registers cpu
   | List_code look_at_opt ->
     let look_at = Option.value ~default:cpu.pc look_at_opt in
     list_code ~look_at ~pc:cpu.pc ~memory:cpu.memory
-  | Print_registers -> print_registers cpu
+  | List_breakpoints ->
+    if List.is_empty debug_state.breakpoints then
+      Printf.printf "No breakpoints set.\n%!"
+    else (
+      debug_state.breakpoints
+      |> List.sort Uint16.compare
+      |> List.iteri (fun i b ->
+          Printf.printf "%i: %04X\n%!" i (Uint16.to_int b))
+    )
+  | Breakpoint addr ->
+    (* TODO: ensure breakpoint is actually byte aligned *)
+    debug_state.breakpoints <- addr :: debug_state.breakpoints
   | Memset (addr, value) ->
     set_value_in_memory ~memory:cpu.memory addr value
 
@@ -93,11 +116,12 @@ let () =
   let memory = Memory.create () in
   Memory.load memory ~src:rom ~pos:Memory.rom_base_address;
   let cpu = Cpu.create memory in
+  let debug_state = { breakpoints = [] } in
   while true do
     match prompt ">" with
     | Some cmd_str ->
       (match parse_command cmd_str with
-      | Some cmd -> execute_command cmd ~cpu
+      | Some cmd -> execute_command cmd ~cpu ~debug_state
       | None -> Printf.eprintf "Unknown command %s\n%!" cmd_str)
     | None ->
       Printf.eprintf "Bye!\n";
