@@ -23,6 +23,7 @@
   (ocaml (>= 5.0.0))
   dune
   (stdint (>= 0.7.2))
-  (tsdl (>= 1.0.0))))
+  (tsdl (>= 1.0.0))
+  (ppx_inline_test :with-test)))
 
 ; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project

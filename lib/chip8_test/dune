@@ -1,0 +1,5 @@
+(library
+ (name chip8_test)
+ (libraries chip8 stdint)
+ (inline_tests (flags -verbose))
+ (preprocess (pps ppx_inline_test)))
