@@ -43,6 +43,8 @@ type instruction =
 | Set_vx_to_vy of register * register
 | Add of register * uint8
 | Add_vx_to_vy of register * register
+| Subtract_vy_from_vx of register * register
+| Subtract_vx_from_vy of register * register
 | Binary_or of register * register
 | Binary_and of register * register
 | Binary_xor of register * register
@@ -71,6 +73,8 @@ let decode opcode =
   | (0x8, x, y, 0x2) -> Binary_and (Uint8.of_int x, Uint8.of_int y)
   | (0x8, x, y, 0x3) -> Binary_xor (Uint8.of_int x, Uint8.of_int y)
   | (0x8, x, y, 0x4) -> Add_vx_to_vy (Uint8.of_int x, Uint8.of_int y)
+  | (0x8, x, y, 0x5) -> Subtract_vy_from_vx (Uint8.of_int x, Uint8.of_int y)
+  | (0x8, x, y, 0x7) -> Subtract_vx_from_vy (Uint8.of_int x, Uint8.of_int y)
   | (0x9, x, y, 0x0) -> Skip_if_vx_vy_ne (Uint8.of_int x, Uint8.of_int y)
   | (0xA, n1, n2, n3) -> Set_index (Nibbles.to_uint16 n1 n2 n3)
   | (0xB, n1, n2, n3) -> Jump0 (Nibbles.to_uint16 n1 n2 n3)
@@ -99,6 +103,15 @@ let execute t instruction =
     t.registers.(Uint8.to_int vx) <- Uint8.(x + y);
     (* check if integer has overflowed *)
     if t.registers.(Uint8.to_int vx) < x
+    then t.registers.(0xF) <- Uint8.one
+    else t.registers.(0xF) <- Uint8.zero
+  | Subtract_vy_from_vx (vx, vy)
+  | Subtract_vx_from_vy (vy, vx) ->
+    let x = t.registers.(Uint8.to_int vx) in
+    let y = t.registers.(Uint8.to_int vy) in
+    t.registers.(Uint8.to_int vx) <- Uint8.(x - y);
+    (* only set VF when value underflows *)
+    if x < y
     then t.registers.(0xF) <- Uint8.one
     else t.registers.(0xF) <- Uint8.zero
   | Binary_or (vx, vy) ->
