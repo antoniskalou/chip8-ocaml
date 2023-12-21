@@ -1,2 +1,3 @@
 (library
- (name chip8))
+ (name chip8)
+ (libraries stdint))
