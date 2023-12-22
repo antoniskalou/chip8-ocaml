@@ -127,13 +127,20 @@ let execute t instruction =
     if read_register vx < x
     then t.registers.(0xF) <- Uint8.one
     else t.registers.(0xF) <- Uint8.zero
-  | Subtract_vy_from_vx (vx, vy)
-  | Subtract_vx_from_vy (vy, vx) ->
+  | Subtract_vy_from_vx (vx, vy) ->
     let x = read_register vx in
     let y = read_register vy in
     write_register vx Uint8.(x - y);
     (* only set VF when value underflows *)
     if x < y
+    then t.registers.(0xF) <- Uint8.one
+    else t.registers.(0xF) <- Uint8.zero
+  | Subtract_vx_from_vy (vx, vy) ->
+    let x = read_register vx in
+    let y = read_register vy in
+    write_register vx Uint8.(y - x);
+    (* only set VF when value underflows *)
+    if y < x
     then t.registers.(0xF) <- Uint8.one
     else t.registers.(0xF) <- Uint8.zero
   | Shift_right (vx, vy) ->
