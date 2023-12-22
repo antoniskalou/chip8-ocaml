@@ -150,7 +150,7 @@ let execute t instruction =
   | Shift_left (vx, vy) ->
     let y = read_register vy in
     write_register vx (Uint8.shift_left y 1);
-    t.registers.(0xF) <- Uint8.logand y (Uint8.of_int 0b1000_0000);
+    t.registers.(0xF) <- Uint8.shift_right y 7
   | Binary_or (vx, vy) ->
     let x = read_register vx in
     let y = read_register vy in
