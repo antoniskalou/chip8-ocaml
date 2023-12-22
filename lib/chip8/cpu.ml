@@ -60,29 +60,30 @@ type instruction =
 | Draw of register * register * uint8
 
 let decode opcode =
+  let u8 = Uint8.of_int in
   match Nibbles.of_uint16 opcode with
   | (0x0, 0x0, 0xE, 0x0) -> Clear
   | (0x0, 0x0, 0xE, 0xE) -> Return
   | (0x1, n1, n2, n3) -> Jump (Nibbles.to_uint16 n1 n2 n3)
   | (0x2, n1, n2, n3) -> Call (Nibbles.to_uint16 n1 n2 n3)
-  | (0x3, x, n1, n2) -> Skip_if_eq (Uint8.of_int x, Nibbles.to_uint8 n1 n2)
-  | (0x4, x, n1, n2) -> Skip_if_ne (Uint8.of_int x, Nibbles.to_uint8 n1 n2)
-  | (0x5, x, y, 0x0) -> Skip_if_vx_vy_eq (Uint8.of_int x, Uint8.of_int y)
-  | (0x6, x, n1, n2) -> Set (Uint8.of_int x, Nibbles.to_uint8 n1 n2)
-  | (0x7, x, n1, n2) -> Add (Uint8.of_int x, Nibbles.to_uint8 n1 n2)
-  | (0x8, x, y, 0x0) -> Set_vx_to_vy (Uint8.of_int x, Uint8.of_int y)
-  | (0x8, x, y, 0x1) -> Binary_or (Uint8.of_int x, Uint8.of_int y)
-  | (0x8, x, y, 0x2) -> Binary_and (Uint8.of_int x, Uint8.of_int y)
-  | (0x8, x, y, 0x3) -> Binary_xor (Uint8.of_int x, Uint8.of_int y)
-  | (0x8, x, y, 0x4) -> Add_vx_to_vy (Uint8.of_int x, Uint8.of_int y)
-  | (0x8, x, y, 0x5) -> Subtract_vy_from_vx (Uint8.of_int x, Uint8.of_int y)
-  | (0x8, x, y, 0x6) -> Shift_right (Uint8.of_int x, Uint8.of_int y)
-  | (0x8, x, y, 0x7) -> Subtract_vx_from_vy (Uint8.of_int x, Uint8.of_int y)
-  | (0x8, x, y, 0xE) -> Shift_left (Uint8.of_int x, Uint8.of_int y)
-  | (0x9, x, y, 0x0) -> Skip_if_vx_vy_ne (Uint8.of_int x, Uint8.of_int y)
+  | (0x3, x, n1, n2) -> Skip_if_eq (u8 x, Nibbles.to_uint8 n1 n2)
+  | (0x4, x, n1, n2) -> Skip_if_ne (u8 x, Nibbles.to_uint8 n1 n2)
+  | (0x5, x, y, 0x0) -> Skip_if_vx_vy_eq (u8 x, u8 y)
+  | (0x6, x, n1, n2) -> Set (u8 x, Nibbles.to_uint8 n1 n2)
+  | (0x7, x, n1, n2) -> Add (u8 x, Nibbles.to_uint8 n1 n2)
+  | (0x8, x, y, 0x0) -> Set_vx_to_vy (u8 x, u8 y)
+  | (0x8, x, y, 0x1) -> Binary_or (u8 x, u8 y)
+  | (0x8, x, y, 0x2) -> Binary_and (u8 x, u8 y)
+  | (0x8, x, y, 0x3) -> Binary_xor (u8 x, u8 y)
+  | (0x8, x, y, 0x4) -> Add_vx_to_vy (u8 x, u8 y)
+  | (0x8, x, y, 0x5) -> Subtract_vy_from_vx (u8 x, u8 y)
+  | (0x8, x, y, 0x6) -> Shift_right (u8 x, u8 y)
+  | (0x8, x, y, 0x7) -> Subtract_vx_from_vy (u8 x, u8 y)
+  | (0x8, x, y, 0xE) -> Shift_left (u8 x, u8 y)
+  | (0x9, x, y, 0x0) -> Skip_if_vx_vy_ne (u8 x, u8 y)
   | (0xA, n1, n2, n3) -> Set_index (Nibbles.to_uint16 n1 n2 n3)
   | (0xB, n1, n2, n3) -> Jump0 (Nibbles.to_uint16 n1 n2 n3)
-  | (0xD, x, y, n) -> Draw (Uint8.of_int x, Uint8.of_int y, Uint8.of_int n)
+  | (0xD, x, y, n) -> Draw (u8 x, Uint8.of_int y, Uint8.of_int n)
   | _ ->
     let opcode_str = Printf.sprintf "0x%04X" (Uint16.to_int opcode) in
     raise (Unknown_opcode (opcode_str, opcode))
