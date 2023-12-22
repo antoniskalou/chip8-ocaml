@@ -8,7 +8,7 @@ type t =
   ; mutable pc : uint16
   ; mutable sp : uint16
   ; mutable delay : uint8
-  ; mutable pressed_key : uint8 option
+  ; keys : bool array
   ; memory : Memory.t
   (* represents a render buffer, when true is encountered a pixel
       is drawn at that coordinate *)
@@ -21,7 +21,7 @@ let create memory =
   ; pc = Memory.rom_base_address
   ; sp = Uint16.of_int 0xFA0
   ; delay = Uint8.of_int 0
-  ; pressed_key = None
+  ; keys = Array.make 16 false
   (* caml8 uses this address in our local memory, though we can use whatever
       stack-like structure we prefer. *)
   ; screen = Screen.create ~w:64 ~h:32
@@ -32,7 +32,9 @@ let screen_buffer (t: t): bool array = Screen.buffer t.screen
 
 let press_key (t: t) (key: int option) =
   Option.iter (Printf.eprintf "PRESSED: 0x%X\n%!") key;
-  t.pressed_key <- Option.map Uint8.of_int key
+  (* assert key < 0x10; *)
+  Option.iter (fun k -> t.keys.(k) <- true) key
+  (* t.pressed_key <- Option.map Uint8.of_int key *)
 
 let fetch (t: t) =
   let opcode = Memory.read_uint16 t.memory ~pos:t.pc in
@@ -212,14 +214,12 @@ let execute t instruction =
     if x <> y then skip () else ()
   | Skip_if_pressed vx ->
     let x = read_register vx in
-    (match t.pressed_key with
-    | Some k when Uint8.compare x k == 0 -> t.pc <- Uint16.(t.pc + of_int 2)
-    | _ -> ())
+    let key = t.keys.(Uint8.to_int x) in
+    if key then t.pc <- Uint16.(t.pc + of_int 2)
   | Skip_if_not_pressed vx ->
     let x = read_register vx in
-    (match t.pressed_key with
-    | Some k when x = k -> ()
-    | _ -> t.pc <- Uint16.(t.pc + of_int 2))
+    let key = t.keys.(Uint8.to_int x) in
+    if not key then t.pc <- Uint16.(t.pc + of_int 2)
   | Jump addr ->
     t.pc <- addr
   | JumpV0 addr ->
@@ -246,15 +246,16 @@ let execute t instruction =
       let pos = Uint16.(t.i + (of_int n)) in
       Memory.write_uint8 t.memory ~pos x)
   | Wait_until_pressed vx ->
-    (match t.pressed_key with
-    | Some k -> write_register vx k
+    (match Array.find_index Fun.id t.keys with
+    | Some i -> write_register vx (Uint8.of_int i)
     (* keep looping *)
     | None -> t.pc <- Uint16.(t.pc - of_int 2))
 
 let tick t =
   (* FIXME: this doesn't time correctly, depends on mainloop
      running at exactly 60Hz *)
-  t.delay <- Uint8.pred t.delay;
+  if Uint8.compare t.delay Uint8.zero == 1 then
+    t.delay <- Uint8.pred t.delay;
   fetch t
   |> decode
   |> execute t
