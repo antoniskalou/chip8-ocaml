@@ -55,6 +55,11 @@ let handle_event () =
   let event = Sdl.Event.create () in
   if Sdl.poll_event (Some event) then begin
     match Sdl.Event.(get event typ |> enum) with
+    | `Key_down ->
+      let scancode = Sdl.Event.(get event keyboard_scancode) in
+      (match Sdl.Scancode.enum scancode with
+      | `Escape -> exit 0
+      | _ -> ())
     | `Quit -> exit 0
     | _ -> ()
   end
