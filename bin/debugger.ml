@@ -144,6 +144,7 @@ let () =
   end;
   let rom = Rom.load argv.(1) in
   let memory = Memory.create () in
+  Memory.load memory ~src:Fonts.fonts ~pos:Uint16.zero;
   Memory.load memory ~src:rom ~pos:Memory.rom_base_address;
   let cpu = Cpu.create memory in
   let debug_state = { breakpoints = [] } in
