@@ -89,77 +89,80 @@ let decode opcode =
     raise (Unknown_opcode (opcode_str, opcode))
 
 let execute t instruction =
+  let read_register v = t.registers.(Uint8.to_int v) in
+  let write_register v x = t.registers.(Uint8.to_int v) <- x in
   let skip () = t.pc <- Uint16.(t.pc + of_int 2) in
   match instruction with
   | Clear -> Array.fill t.screen 0 (Array.length t.screen) false
   | Set (vx, value) ->
-    t.registers.(Uint8.to_int vx) <- value
+    write_register vx value;
   | Set_index (i) ->
     t.i <- i
   | Set_vx_to_vy (vx, vy) ->
-    let y = t.registers.(Uint8.to_int vy) in
-    t.registers.(Uint8.to_int vx) <- y
+    let y = read_register vy in
+    write_register vx y
   | Add (vx, value) ->
-    let x = t.registers.(Uint8.to_int vx) in
-    t.registers.(Uint8.to_int vx) <- Uint8.(x + value)
+    let x = read_register vx in
+    write_register vx Uint8.(x + value)
   | Add_vx_to_vy (vx, vy) ->
-    let x = t.registers.(Uint8.to_int vx) in
-    let y = t.registers.(Uint8.to_int vy) in
-    t.registers.(Uint8.to_int vx) <- Uint8.(x + y);
+    let x = read_register vx in
+    let y = read_register vy in
+    write_register vx Uint8.(x + y);
     (* check if integer has overflowed *)
-    if t.registers.(Uint8.to_int vx) < x
+    if read_register vx < x
     then t.registers.(0xF) <- Uint8.one
     else t.registers.(0xF) <- Uint8.zero
   | Subtract_vy_from_vx (vx, vy)
   | Subtract_vx_from_vy (vy, vx) ->
-    let x = t.registers.(Uint8.to_int vx) in
-    let y = t.registers.(Uint8.to_int vy) in
-    t.registers.(Uint8.to_int vx) <- Uint8.(x - y);
+    let x = read_register vx in
+    let y = read_register vy in
+    write_register vx Uint8.(x - y);
     (* only set VF when value underflows *)
     if x < y
     then t.registers.(0xF) <- Uint8.one
     else t.registers.(0xF) <- Uint8.zero
   | Shift_right (vx, vy) ->
-    let y = t.registers.(Uint8.to_int vy) in
-    t.registers.(Uint8.to_int vx) <- Uint8.shift_right y 1;
+    let y = read_register vy in
+    write_register vx (Uint8.shift_right y 1);
     t.registers.(0xF) <- Uint8.logand y Uint8.one;
   | Shift_left (vx, vy) ->
-    let y = t.registers.(Uint8.to_int vy) in
-    t.registers.(Uint8.to_int vx) <- Uint8.shift_left y 1;
+    let y = read_register vy in
+    write_register vx (Uint8.shift_left y 1);
     t.registers.(0xF) <- Uint8.logand y (Uint8.of_int 0b1000_0000);
   | Binary_or (vx, vy) ->
-    let x = t.registers.(Uint8.to_int vx) in
-    let y = t.registers.(Uint8.to_int vy) in
-    t.registers.(Uint8.to_int vx) <- Uint8.logor x y;
+    let x = read_register vx in
+    let y = read_register vy in
+    write_register vx (Uint8.logor x y);
   | Binary_and (vx, vy) ->
-    let x = t.registers.(Uint8.to_int vx) in
-    let y = t.registers.(Uint8.to_int vy) in
-    t.registers.(Uint8.to_int vx) <- Uint8.logand x y;
+    let x = read_register vx in
+    let y = read_register vy in
+    write_register vx (Uint8.logand x y);
   | Binary_xor (vx, vy) ->
-    let x = t.registers.(Uint8.to_int vx) in
-    let y = t.registers.(Uint8.to_int vy) in
-    t.registers.(Uint8.to_int vx) <- Uint8.logxor x y;
+    let x = read_register vx in
+    let y = read_register vy in
+    write_register vx (Uint8.logxor x y);
   | Draw (vx, vy, rows) ->
-    let x = t.registers.(Uint8.to_int vx) |> Uint8.to_int in
-    let y = t.registers.(Uint8.to_int vy) |> Uint8.to_int in
+    let x = read_register vx |> Uint8.to_int in
+    let y = read_register vy |> Uint8.to_int in
     let f_flag =
       Screen.draw t.screen ~memory:t.memory ~i:t.i ~vx:x ~vy:y ~rows
     in
     t.registers.(0xF) <- f_flag;
-  | Jump tgt -> t.pc <- tgt
+  | Jump tgt ->
+    t.pc <- tgt
   | Skip_if_eq (vx, value) ->
-    let x = t.registers.(Uint8.to_int vx) in
+    let x = read_register vx in
     if x = value then skip () else ()
   | Skip_if_ne (vx, value) ->
-    let x = t.registers.(Uint8.to_int vx) in
+    let x = read_register vx in
     if x != value then skip () else ()
   | Skip_if_vx_vy_eq (vx, vy) ->
-    let x = t.registers.(Uint8.to_int vx) in
-    let y = t.registers.(Uint8.to_int vy) in
+    let x = read_register vx in
+    let y = read_register vy in
     if x = y then skip () else ()
   | Skip_if_vx_vy_ne (vx, vy) ->
-    let x = t.registers.(Uint8.to_int vx) in
-    let y = t.registers.(Uint8.to_int vy) in
+    let x = read_register vx in
+    let y = read_register vy in
     if x != y then skip () else ()
   | Call addr ->
     t.sp <- Uint16.(t.sp + of_int 2);
