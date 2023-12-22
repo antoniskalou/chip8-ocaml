@@ -132,7 +132,7 @@ let execute t instruction =
     let y = read_register vy in
     write_register vx Uint8.(x - y);
     (* only set VF when value underflows *)
-    if x < y
+    if Uint8.compare x y <> -1
     then t.registers.(0xF) <- Uint8.one
     else t.registers.(0xF) <- Uint8.zero
   | Subtract_vx_from_vy (vx, vy) ->
@@ -181,7 +181,7 @@ let execute t instruction =
     if x = value then skip () else ()
   | Skip_if_ne (vx, value) ->
     let x = read_register vx in
-    if x != value then skip () else ()
+    if x <> value then skip () else ()
   | Skip_if_vx_vy_eq (vx, vy) ->
     let x = read_register vx in
     let y = read_register vy in
@@ -189,7 +189,7 @@ let execute t instruction =
   | Skip_if_vx_vy_ne (vx, vy) ->
     let x = read_register vx in
     let y = read_register vy in
-    if x != y then skip () else ()
+    if x <> y then skip () else ()
   | Jump addr ->
     t.pc <- addr
   | JumpV0 addr ->
