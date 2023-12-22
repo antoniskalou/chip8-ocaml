@@ -15,7 +15,9 @@ module Emulator = struct
     }
 end
 
-let threshold = 1. /. 360.
+(* the threshold before a CPU tick happens. It is calculated as
+   1 / desired FPS *)
+let threshold = 1. /. 400.
 let render_scale = 20
 
 let or_exit = function

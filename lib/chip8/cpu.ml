@@ -7,6 +7,7 @@ type t =
   ; mutable i : uint16
   ; mutable pc : uint16
   ; mutable sp : uint16
+  ; mutable delay : uint8
   ; memory : Memory.t
   (* represents a render buffer, when true is encountered a pixel
       is drawn at that coordinate *)
@@ -17,6 +18,7 @@ let create memory =
   { registers = Array.make 16 Uint8.zero
   ; i = Uint16.zero
   ; pc = Memory.rom_base_address
+  ; delay = Uint8.of_int 0
   (* caml8 uses this address in our local memory, though we can use whatever
       stack-like structure we prefer. *)
   ; sp = Uint16.of_int 0xFA0
@@ -40,7 +42,9 @@ type instruction =
 | Return
 | Set of register * uint8
 | Set_index of uint16
+| Set_delay of register
 | Set_vx_to_vy of register * register
+| Read_delay of register
 | Add of register * uint8
 | Add_to_index of register
 | Add_vx_to_vy of register * register
@@ -88,6 +92,8 @@ let decode opcode =
   | (0xA, n1, n2, n3) -> Set_index (Nibbles.to_uint16 n1 n2 n3)
   | (0xB, n1, n2, n3) -> JumpV0 (Nibbles.to_uint16 n1 n2 n3)
   | (0xD, x, y, n) -> Draw (u8 x, Uint8.of_int y, Uint8.of_int n)
+  | (0xF, x, 0x0, 0x7) -> Read_delay (u8 x)
+  | (0xF, x, 0x1, 0x5) -> Set_delay (u8 x)
   | (0xF, x, 0x1, 0xE) -> Add_to_index (u8 x)
   | (0xF, x, 0x3, 0x3) -> Bcd (u8 x)
   | (0xF, x, 0x5, 0x5) -> Store (u8 x)
@@ -104,11 +110,15 @@ let execute t instruction =
   | Clear -> Array.fill t.screen 0 (Array.length t.screen) false
   | Set (vx, value) ->
     write_register vx value;
-  | Set_index (i) ->
+  | Set_index i ->
     t.i <- i
+  | Set_delay vx ->
+    t.delay <- read_register vx
   | Set_vx_to_vy (vx, vy) ->
     let y = read_register vy in
     write_register vx y
+  | Read_delay vx ->
+    write_register vx t.delay
   | Add (vx, value) ->
     let x = read_register vx in
     write_register vx Uint8.(x + value)
@@ -217,6 +227,9 @@ let execute t instruction =
       Memory.write_uint8 t.memory ~pos x)
 
 let tick t =
+  (* FIXME: this doesn't time correctly, depends on mainloop
+     running at exactly 60Hz *)
+  t.delay <- Uint8.pred t.delay;
   fetch t
   |> decode
   |> execute t
