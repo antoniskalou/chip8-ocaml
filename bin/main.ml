@@ -15,7 +15,7 @@ module Emulator = struct
     }
 end
 
-let threshold = 1. /. 20.
+let threshold = 1. /. 360.
 let render_scale = 20
 
 let or_exit = function

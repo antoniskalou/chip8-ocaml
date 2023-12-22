@@ -42,6 +42,7 @@ type instruction =
 | Set_index of uint16
 | Set_vx_to_vy of register * register
 | Add of register * uint8
+| Add_to_index of register
 | Add_vx_to_vy of register * register
 | Subtract_vy_from_vx of register * register
 | Subtract_vx_from_vy of register * register
@@ -87,6 +88,7 @@ let decode opcode =
   | (0xA, n1, n2, n3) -> Set_index (Nibbles.to_uint16 n1 n2 n3)
   | (0xB, n1, n2, n3) -> JumpV0 (Nibbles.to_uint16 n1 n2 n3)
   | (0xD, x, y, n) -> Draw (u8 x, Uint8.of_int y, Uint8.of_int n)
+  | (0xF, x, 0x1, 0xE) -> Add_to_index (u8 x)
   | (0xF, x, 0x3, 0x3) -> Bcd (u8 x)
   | (0xF, x, 0x5, 0x5) -> Store (u8 x)
   | (0xF, x, 0x6, 0x5) -> Load (u8 x)
@@ -110,6 +112,13 @@ let execute t instruction =
   | Add (vx, value) ->
     let x = read_register vx in
     write_register vx Uint8.(x + value)
+  | Add_to_index vx ->
+    t.i <- Uint16.(t.i + of_uint8 (read_register vx));
+    (* emulate amiga behaviour in hopes of more game support,
+       see https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#fx1e-add-to-index *)
+    if t.i >= Uint16.of_int 0x1000
+    then t.registers.(0xF) <- Uint8.one;
+    (* TODO: figure out if we should reset the flag back to 0 *)
   | Add_vx_to_vy (vx, vy) ->
     let x = read_register vx in
     let y = read_register vy in
