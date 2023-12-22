@@ -58,6 +58,8 @@ type instruction =
 | Skip_if_vx_vy_eq of register * register
 | Skip_if_vx_vy_ne of register * register
 | Draw of register * register * uint8
+| Load of register
+| Store of register
 
 let decode opcode =
   let u8 = Uint8.of_int in
@@ -84,6 +86,8 @@ let decode opcode =
   | (0xA, n1, n2, n3) -> Set_index (Nibbles.to_uint16 n1 n2 n3)
   | (0xB, n1, n2, n3) -> JumpV0 (Nibbles.to_uint16 n1 n2 n3)
   | (0xD, x, y, n) -> Draw (u8 x, Uint8.of_int y, Uint8.of_int n)
+  | (0xF, x, 0x5, 0x5) -> Store (u8 x)
+  | (0xF, x, 0x6, 0x5) -> Load (u8 x)
   | _ ->
     let opcode_str = Printf.sprintf "0x%04X" (Uint16.to_int opcode) in
     raise (Unknown_opcode (opcode_str, opcode))
@@ -174,6 +178,19 @@ let execute t instruction =
     let addr = Memory.read_uint16 t.memory ~pos:t.sp in
     t.sp <- Uint16.(t.sp - of_int 2);
     t.pc <- addr
+  | Load vx ->
+    assert Uint8.(vx < (of_int 0x10));
+    Array.sub t.registers 0 (Uint8.to_int vx + 1)
+    |> Array.iteri (fun n _ ->
+      let n = Uint16.of_int n in
+      let x = Memory.read_uint8 t.memory ~pos:Uint16.(t.i + n) in
+      write_register (Uint16.to_uint8 n) x)
+  | Store vx ->
+    assert Uint8.(vx < (of_int 0x10));
+    Array.sub t.registers 0 (Uint8.to_int vx + 1)
+    |> Array.iteri (fun n x ->
+      let pos = Uint16.(t.i + (of_int n)) in
+      Memory.write_uint8 t.memory ~pos x)
 
 let tick t =
   fetch t
