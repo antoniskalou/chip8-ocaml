@@ -153,7 +153,6 @@ let execute t instruction =
     let x = read_register vx in
     let y = read_register vy in
     write_register vx Uint8.(x - y);
-    (* only set VF when value underflows *)
     if Uint8.compare x y <> -1
     then t.registers.(0xF) <- Uint8.one
     else t.registers.(0xF) <- Uint8.zero
@@ -161,7 +160,6 @@ let execute t instruction =
     let x = read_register vx in
     let y = read_register vy in
     write_register vx Uint8.(y - x);
-    (* only set VF when value underflows *)
     if Uint8.compare y x <> -1
     then t.registers.(0xF) <- Uint8.one
     else t.registers.(0xF) <- Uint8.zero

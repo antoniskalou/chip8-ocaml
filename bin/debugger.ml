@@ -16,6 +16,10 @@ type cmd =
   | List_code of uint16 option
   | List_breakpoints
   | Print_registers
+  | Load_file of uint16 * string
+  | Key_set of int
+  | Key_unset
+  | Print_key
 
 let parse_command cmd_str =
   match String.split_on_char ' ' cmd_str with
@@ -29,6 +33,14 @@ let parse_command cmd_str =
     Some List_breakpoints
   | ["b"; addr] | ["break"; addr] ->
     Some (Breakpoint (Uint16.of_string addr))
+  | ["f"; addr; filename] ->
+    Some (Load_file (Uint16.of_string addr, filename))
+  | ["k"] | ["key"] ->
+    Some (Print_key)
+  | ["ks"; k] | ["keyset"; k] ->
+    Some (Key_set Uint8.(to_int (of_string k)))
+  | ["ku"] | ["keyunset"] ->
+    Some (Key_unset)
   | ["memset"; addr; value] ->
     (* TODO: handle errors *)
     Some (Memset (Uint16.of_string addr, Uint16.of_string value))
@@ -106,6 +118,23 @@ let execute_command ~cpu ~debug_state =
     debug_state.breakpoints <- addr :: debug_state.breakpoints
   | Memset (addr, value) ->
     set_value_in_memory ~memory:cpu.memory addr value
+  | Load_file (addr, filename) ->
+    (try
+      let contents = In_channel.with_open_text filename In_channel.input_lines in
+      contents |> List.iteri (fun i opcode ->
+        let offset = i * 2 in
+        let addr' = Uint16.(addr + of_int offset) in
+        let opcode' = Uint16.of_string opcode in
+        set_value_in_memory ~memory:cpu.memory addr' opcode')
+    with Sys_error e ->
+      Printf.eprintf "Could not open file: %s\n%!" e)
+  | Key_set k -> Cpu.press_key cpu (Some k)
+  | Key_unset -> Cpu.press_key cpu None
+  | Print_key ->
+    (match cpu.pressed_key with
+    | Some k -> Printf.printf "Pressed: 0x%X\n%!" (Uint8.to_int k)
+    | None -> Printf.printf "No key pressed.\n%!")
+
 
 let () =
   let argv = Sys.argv in
