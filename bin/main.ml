@@ -61,10 +61,26 @@ let handle_event () =
       let scancode = Sdl.Event.(get event keyboard_scancode) in
       (match Sdl.Scancode.enum scancode with
       | `Escape -> exit 0
-      | _ -> ())
+      | `K1 -> Some 0x1
+      | `K2 -> Some 0x2
+      | `K3 -> Some 0x3
+      | `K4 -> Some 0xC
+      | `Q -> Some 0x4
+      | `W -> Some 0x5
+      | `E -> Some 0x6
+      | `R -> Some 0xD
+      | `A -> Some 0x7
+      | `S -> Some 0x8
+      | `D -> Some 0x9
+      | `F -> Some 0xE
+      | `Z -> Some 0xA
+      | `X -> Some 0x0
+      | `C -> Some 0xB
+      | `V -> Some 0xF
+      | _ -> None)
     | `Quit -> exit 0
-    | _ -> ()
-  end
+    | _ -> None
+  end else None
 
 let () =
   let argv = Sys.argv in
@@ -79,13 +95,13 @@ let () =
   let renderer = init_graphics () in
   let last_tick = ref 0. in
   while true do
+    (* handle events outside of timed loop as to not miss any events that
+       may happen while the timed cycle is waiting *)
+    handle_event () |> Cpu.press_key cpu;
     if (Unix.gettimeofday () -. !last_tick) >= threshold then begin
       Cpu.tick cpu;
       clear_graphics renderer;
       draw_graphics (Cpu.screen_buffer cpu) renderer;
       last_tick := Unix.gettimeofday ()
-    end;
-    (* handle events outside of timed loop as to not miss any events that
-       may happen while the timed cycle is waiting *)
-    handle_event ()
+    end
   done

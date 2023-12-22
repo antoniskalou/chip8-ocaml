@@ -8,6 +8,7 @@ type t =
   ; mutable pc : uint16
   ; mutable sp : uint16
   ; mutable delay : uint8
+  ; mutable pressed_key : uint8 option
   ; memory : Memory.t
   (* represents a render buffer, when true is encountered a pixel
       is drawn at that coordinate *)
@@ -18,15 +19,19 @@ let create memory =
   { registers = Array.make 16 Uint8.zero
   ; i = Uint16.zero
   ; pc = Memory.rom_base_address
+  ; sp = Uint16.of_int 0xFA0
   ; delay = Uint8.of_int 0
+  ; pressed_key = None
   (* caml8 uses this address in our local memory, though we can use whatever
       stack-like structure we prefer. *)
-  ; sp = Uint16.of_int 0xFA0
   ; screen = Screen.create ~w:64 ~h:32
   ; memory
   }
 
 let screen_buffer (t: t): bool array = Screen.buffer t.screen
+
+let press_key (t: t) (key: int option) =
+  t.pressed_key <- Option.map Uint8.of_int key
 
 let fetch (t: t) =
   let opcode = Memory.read_uint16 t.memory ~pos:t.pc in
