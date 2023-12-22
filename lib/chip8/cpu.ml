@@ -140,7 +140,7 @@ let execute t instruction =
     let y = read_register vy in
     write_register vx Uint8.(y - x);
     (* only set VF when value underflows *)
-    if y < x
+    if Uint8.compare y x <> -1
     then t.registers.(0xF) <- Uint8.one
     else t.registers.(0xF) <- Uint8.zero
   | Shift_right (vx, vy) ->
