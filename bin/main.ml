@@ -90,15 +90,16 @@ let () =
   end;
   let rom = Rom.load argv.(1) in
   let memory = Memory.create () in
+  Memory.load memory ~src:Fonts.fonts ~pos:Uint16.zero;
   Memory.load memory ~src:rom ~pos:Memory.rom_base_address;
   let cpu = Cpu.create memory in
   let renderer = init_graphics () in
   let last_tick = ref 0. in
   while true do
-    (* handle events outside of timed loop as to not miss any events that
-       may happen while the timed cycle is waiting *)
-    handle_event () |> Cpu.press_key cpu;
     if (Unix.gettimeofday () -. !last_tick) >= threshold then begin
+      (* handle events outside of timed loop as to not miss any events that
+        may happen while the timed cycle is waiting *)
+      handle_event () |> Cpu.press_key cpu;
       Cpu.tick cpu;
       clear_graphics renderer;
       draw_graphics (Cpu.screen_buffer cpu) renderer;

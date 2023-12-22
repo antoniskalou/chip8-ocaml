@@ -7,6 +7,9 @@ let create ~w ~h = Array.make (w * h) false
 
 let buffer (t: t): bool array = t
 
+let clear t =
+  Array.fill t 0 (Array.length t) false
+
 let draw t ~memory ~i ~vx ~vy ~rows =
   let f_flag = ref Uint8.zero in
   for y = 0 to Uint8.to_int rows - 1 do

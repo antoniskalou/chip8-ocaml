@@ -31,6 +31,7 @@ let create memory =
 let screen_buffer (t: t): bool array = Screen.buffer t.screen
 
 let press_key (t: t) (key: int option) =
+  Option.iter (Printf.eprintf "PRESSED: 0x%X\n%!") key;
   t.pressed_key <- Option.map Uint8.of_int key
 
 let fetch (t: t) =
@@ -68,9 +69,12 @@ type instruction =
 | Skip_if_ne of register * uint8
 | Skip_if_vx_vy_eq of register * register
 | Skip_if_vx_vy_ne of register * register
+| Skip_if_pressed of register
+| Skip_if_not_pressed of register
 | Draw of register * register * uint8
 | Load of register
 | Store of register
+| Wait_until_pressed of register
 
 let decode opcode =
   let u8 = Uint8.of_int in
@@ -97,7 +101,10 @@ let decode opcode =
   | (0xA, n1, n2, n3) -> Set_index (Nibbles.to_uint16 n1 n2 n3)
   | (0xB, n1, n2, n3) -> JumpV0 (Nibbles.to_uint16 n1 n2 n3)
   | (0xD, x, y, n) -> Draw (u8 x, Uint8.of_int y, Uint8.of_int n)
+  | (0xE, x, 0xA, 0x1) -> Skip_if_not_pressed (u8 x)
+  | (0xE, x, 0x9, 0xE) -> Skip_if_pressed (u8 x)
   | (0xF, x, 0x0, 0x7) -> Read_delay (u8 x)
+  | (0xF, x, 0x0, 0xA) -> Wait_until_pressed (u8 x)
   | (0xF, x, 0x1, 0x5) -> Set_delay (u8 x)
   | (0xF, x, 0x1, 0xE) -> Add_to_index (u8 x)
   | (0xF, x, 0x3, 0x3) -> Bcd (u8 x)
@@ -112,7 +119,7 @@ let execute t instruction =
   let write_register v x = t.registers.(Uint8.to_int v) <- x in
   let skip () = t.pc <- Uint16.(t.pc + of_int 2) in
   match instruction with
-  | Clear -> Array.fill t.screen 0 (Array.length t.screen) false
+  | Clear -> Screen.clear t.screen
   | Set (vx, value) ->
     write_register vx value;
   | Set_index i ->
@@ -205,6 +212,16 @@ let execute t instruction =
     let x = read_register vx in
     let y = read_register vy in
     if x <> y then skip () else ()
+  | Skip_if_pressed vx ->
+    let x = read_register vx in
+    (match t.pressed_key with
+    | Some k when Uint8.compare x k == 0 -> t.pc <- Uint16.(t.pc + of_int 2)
+    | _ -> ())
+  | Skip_if_not_pressed vx ->
+    let x = read_register vx in
+    (match t.pressed_key with
+    | Some k when x = k -> ()
+    | _ -> t.pc <- Uint16.(t.pc + of_int 2))
   | Jump addr ->
     t.pc <- addr
   | JumpV0 addr ->
@@ -230,6 +247,11 @@ let execute t instruction =
     |> Array.iteri (fun n x ->
       let pos = Uint16.(t.i + (of_int n)) in
       Memory.write_uint8 t.memory ~pos x)
+  | Wait_until_pressed vx ->
+    (match t.pressed_key with
+    | Some k -> write_register vx k
+    (* keep looping *)
+    | None -> t.pc <- Uint16.(t.pc - of_int 2))
 
 let tick t =
   (* FIXME: this doesn't time correctly, depends on mainloop
