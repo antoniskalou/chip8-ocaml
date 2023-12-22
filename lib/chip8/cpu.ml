@@ -51,7 +51,7 @@ type instruction =
 | Binary_and of register * register
 | Binary_xor of register * register
 | Jump of uint16
-| Jump0 of uint16
+| JumpV0 of uint16
 | Call of uint16
 | Skip_if_eq of register * uint8
 | Skip_if_ne of register * uint8
@@ -82,7 +82,7 @@ let decode opcode =
   | (0x8, x, y, 0xE) -> Shift_left (u8 x, u8 y)
   | (0x9, x, y, 0x0) -> Skip_if_vx_vy_ne (u8 x, u8 y)
   | (0xA, n1, n2, n3) -> Set_index (Nibbles.to_uint16 n1 n2 n3)
-  | (0xB, n1, n2, n3) -> Jump0 (Nibbles.to_uint16 n1 n2 n3)
+  | (0xB, n1, n2, n3) -> JumpV0 (Nibbles.to_uint16 n1 n2 n3)
   | (0xD, x, y, n) -> Draw (u8 x, Uint8.of_int y, Uint8.of_int n)
   | _ ->
     let opcode_str = Printf.sprintf "0x%04X" (Uint16.to_int opcode) in
@@ -148,8 +148,6 @@ let execute t instruction =
       Screen.draw t.screen ~memory:t.memory ~i:t.i ~vx:x ~vy:y ~rows
     in
     t.registers.(0xF) <- f_flag;
-  | Jump tgt ->
-    t.pc <- tgt
   | Skip_if_eq (vx, value) ->
     let x = read_register vx in
     if x = value then skip () else ()
@@ -164,6 +162,10 @@ let execute t instruction =
     let x = read_register vx in
     let y = read_register vy in
     if x != y then skip () else ()
+  | Jump addr ->
+    t.pc <- addr
+  | JumpV0 addr ->
+    t.pc <- Uint16.(addr + (of_uint8 t.registers.(0x0)))
   | Call addr ->
     t.sp <- Uint16.(t.sp + of_int 2);
     Memory.write_uint16 t.memory ~pos:t.sp t.pc;
@@ -172,7 +174,6 @@ let execute t instruction =
     let addr = Memory.read_uint16 t.memory ~pos:t.sp in
     t.sp <- Uint16.(t.sp - of_int 2);
     t.pc <- addr
-  | Jump0 _ -> failwith "Jump0"
 
 let tick t =
   fetch t
