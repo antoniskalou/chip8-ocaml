@@ -50,6 +50,7 @@ type instruction =
 | Binary_or of register * register
 | Binary_and of register * register
 | Binary_xor of register * register
+| Bcd of register
 | Jump of uint16
 | JumpV0 of uint16
 | Call of uint16
@@ -86,6 +87,7 @@ let decode opcode =
   | (0xA, n1, n2, n3) -> Set_index (Nibbles.to_uint16 n1 n2 n3)
   | (0xB, n1, n2, n3) -> JumpV0 (Nibbles.to_uint16 n1 n2 n3)
   | (0xD, x, y, n) -> Draw (u8 x, Uint8.of_int y, Uint8.of_int n)
+  | (0xF, x, 0x3, 0x3) -> Bcd (u8 x)
   | (0xF, x, 0x5, 0x5) -> Store (u8 x)
   | (0xF, x, 0x6, 0x5) -> Load (u8 x)
   | _ ->
@@ -145,6 +147,12 @@ let execute t instruction =
     let x = read_register vx in
     let y = read_register vy in
     write_register vx (Uint8.logxor x y);
+  | Bcd vx ->
+    let x = Uint8.to_int (read_register vx) in
+    let (ones, tens, hundreds) = (x mod 10, (x / 10) mod 10, (x / 100) mod 10) in
+    Memory.write_uint8 t.memory ~pos:t.i (Uint8.of_int hundreds);
+    Memory.write_uint8 t.memory ~pos:Uint16.(t.i + (of_int 1)) (Uint8.of_int tens);
+    Memory.write_uint8 t.memory ~pos:Uint16.(t.i + (of_int 2)) (Uint8.of_int ones)
   | Draw (vx, vy, rows) ->
     let x = read_register vx |> Uint8.to_int in
     let y = read_register vy |> Uint8.to_int in
