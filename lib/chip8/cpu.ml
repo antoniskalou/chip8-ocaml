@@ -190,14 +190,17 @@ let execute t instruction =
   | Binary_or (vx, vy) ->
     let x = read_register vx in
     let y = read_register vy in
+    t.registers.(0xF) <- Uint8.zero;
     write_register vx (Uint8.logor x y);
   | Binary_and (vx, vy) ->
     let x = read_register vx in
     let y = read_register vy in
+    t.registers.(0xF) <- Uint8.zero;
     write_register vx (Uint8.logand x y);
   | Binary_xor (vx, vy) ->
     let x = read_register vx in
     let y = read_register vy in
+    t.registers.(0xF) <- Uint8.zero;
     write_register vx (Uint8.logxor x y);
   | Bcd vx ->
     let x = Uint8.to_int (read_register vx) in
