@@ -268,12 +268,15 @@ let execute t instruction =
     (* keep looping *)
     | None -> t.pc <- Uint16.(t.pc - of_int 2))
 
+let sound_playing t =
+  Uint8.compare t.sound Uint8.zero = 1
+
 let tick t =
   (* FIXME: this doesn't time correctly, depends on mainloop
      running at exactly 60Hz *)
-  if Uint8.compare t.delay Uint8.zero == 1 then
+  if Uint8.compare t.delay Uint8.zero = 1 then
     t.delay <- Uint8.pred t.delay;
-  if Uint8.compare t.sound Uint8.zero == 1 then
+  if Uint8.compare t.sound Uint8.zero = 1 then
     t.sound <- Uint8.pred t.sound;
   fetch t
   |> decode
