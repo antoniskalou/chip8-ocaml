@@ -52,6 +52,7 @@ type instruction =
 | Set_delay of register
 | Set_sound of register
 | Set_vx_to_vy of register * register
+| Set_font of register
 | Read_delay of register
 | Random of register * uint8
 | Add of register * uint8
@@ -112,6 +113,7 @@ let decode opcode =
   | (0xF, x, 0x1, 0x5) -> Set_delay (u8 x)
   | (0xF, x, 0x1, 0x8) -> Set_sound (u8 x)
   | (0xF, x, 0x1, 0xE) -> Add_to_index (u8 x)
+  | (0xF, x, 0x2, 0x9) -> Set_font (u8 x)
   | (0xF, x, 0x3, 0x3) -> Bcd (u8 x)
   | (0xF, x, 0x5, 0x5) -> Store (u8 x)
   | (0xF, x, 0x6, 0x5) -> Load (u8 x)
@@ -136,6 +138,9 @@ let execute t instruction =
   | Set_vx_to_vy (vx, vy) ->
     let y = read_register vy in
     write_register vx y
+  | Set_font vx ->
+    let x = read_register vx in
+    t.i <- Uint16.((of_uint8 x) * (of_int 5))
   | Read_delay vx ->
     write_register vx t.delay
   | Random (vx, value) ->
@@ -204,7 +209,7 @@ let execute t instruction =
     let x = read_register vx |> Uint8.to_int in
     let y = read_register vy |> Uint8.to_int in
     let f_flag =
-      Screen.draw t.screen ~memory:t.memory ~i:t.i ~vx:x ~vy:y ~rows
+      Screen.draw t.screen ~memory:t.memory ~i:t.i ~x ~y ~rows
     in
     t.registers.(0xF) <- f_flag;
   | Skip_if_eq (vx, value) ->

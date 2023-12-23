@@ -1,30 +1,42 @@
 open Stdint
 
-type t = bool array
+type t =
+  { buffer : bool array
+  ; width : int
+  ; height : int
+  }
 
 (* TODO: ensure w and h are powers of 2 and have a 2:1 ratio *)
-let create ~w ~h = Array.make (w * h) false
+let create ~w ~h =
+  { buffer = Array.make (w * h) false
+  ; width = w
+  ; height = h
+  }
 
-let buffer (t: t): bool array = t
+let buffer (t: t): bool array = t.buffer
 
-let clear t =
-  Array.fill t 0 (Array.length t) false
+let clear { buffer; _ } =
+  Array.fill buffer 0 (Array.length buffer) false
 
-let draw t ~memory ~i ~vx ~vy ~rows =
+let draw t ~memory ~i ~x ~y ~rows =
   let f_flag = ref Uint8.zero in
-  for y = 0 to Uint8.to_int rows - 1 do
-    let line =
-      Memory.read_uint8 memory ~pos:Uint16.(i + of_int y)
+  for y_line = 0 to Uint8.to_int rows - 1 do
+    let pixels =
+      Memory.read_uint8 memory ~pos:Uint16.(i + of_int y_line)
       |> Uint8.to_int
     in
-    for x = 0 to 7 do
-      let bit = (line lsr (7 - x)) land (0b00000001) = 1 in
-      let screen_idx = ((y + vy) mod 32) * 64 + (x + (vx mod 64)) in
-      if bit && t.(screen_idx) then begin
-        t.(screen_idx) <- false;
-        f_flag := Uint8.one;
-      end else if bit then
-        t.(screen_idx) <- true
+    for x_line = 0 to 7 do
+      if (pixels land (0b1000_0000 lsr x_line)) <> 0 then begin
+        (* TODO: get screen w/h from t *)
+        let x' = (x + x_line) mod t.width in
+        let y' = (y + y_line) mod t.height in
+        (* pixel index in 1d screen array *)
+        let idx = x' + t.width * y' in
+        if t.buffer.(idx) then begin
+          t.buffer.(idx) <- false;
+          f_flag := Uint8.one
+        end else t.buffer.(idx) <- true
+      end
     done
   done;
   !f_flag
