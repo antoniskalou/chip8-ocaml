@@ -17,6 +17,11 @@
  (modules debugger)
  (libraries chip8))
 
+(executable
+  (name play_sound)
+  (modules play_sound)
+  (libraries chip8 tsdl-mixer))
+
 (env
   (dev
     (flags (:standard -warn-error -A)))

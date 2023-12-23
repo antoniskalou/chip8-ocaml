@@ -25,7 +25,7 @@ let or_exit = function
   | Ok x -> x
 
 let init_graphics () =
-  Sdl.init Sdl.Init.(video + events) |> or_exit;
+  Sdl.init Sdl.Init.(video + events + audio) |> or_exit;
   let w =
     Sdl.create_window
       ~w:(64 * render_scale) ~h:(32 * render_scale)
