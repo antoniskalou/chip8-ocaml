@@ -8,6 +8,7 @@ type t =
   ; mutable pc : uint16
   ; mutable sp : uint16
   ; mutable delay : uint8
+  ; mutable sound : uint8
   ; keys : bool array
   ; memory : Memory.t
   (* represents a render buffer, when true is encountered a pixel
@@ -20,7 +21,8 @@ let create memory =
   ; i = Uint16.zero
   ; pc = Memory.rom_base_address
   ; sp = Uint16.of_int 0xFA0
-  ; delay = Uint8.of_int 0
+  ; delay = Uint8.zero
+  ; sound = Uint8.zero
   ; keys = Array.make 16 false
   (* caml8 uses this address in our local memory, though we can use whatever
       stack-like structure we prefer. *)
@@ -48,6 +50,7 @@ type instruction =
 | Set of register * uint8
 | Set_index of uint16
 | Set_delay of register
+| Set_sound of register
 | Set_vx_to_vy of register * register
 | Read_delay of register
 | Random of register * uint8
@@ -107,6 +110,7 @@ let decode opcode =
   | (0xF, x, 0x0, 0x7) -> Read_delay (u8 x)
   | (0xF, x, 0x0, 0xA) -> Wait_until_pressed (u8 x)
   | (0xF, x, 0x1, 0x5) -> Set_delay (u8 x)
+  | (0xF, x, 0x1, 0x8) -> Set_sound (u8 x)
   | (0xF, x, 0x1, 0xE) -> Add_to_index (u8 x)
   | (0xF, x, 0x3, 0x3) -> Bcd (u8 x)
   | (0xF, x, 0x5, 0x5) -> Store (u8 x)
@@ -127,6 +131,8 @@ let execute t instruction =
     t.i <- i
   | Set_delay vx ->
     t.delay <- read_register vx
+  | Set_sound vx ->
+    t.sound <- read_register vx
   | Set_vx_to_vy (vx, vy) ->
     let y = read_register vy in
     write_register vx y
@@ -259,6 +265,8 @@ let tick t =
      running at exactly 60Hz *)
   if Uint8.compare t.delay Uint8.zero == 1 then
     t.delay <- Uint8.pred t.delay;
+  if Uint8.compare t.sound Uint8.zero == 1 then
+    t.sound <- Uint8.pred t.sound;
   fetch t
   |> decode
   |> execute t
