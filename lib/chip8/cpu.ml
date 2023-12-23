@@ -30,11 +30,8 @@ let create memory =
 
 let screen_buffer (t: t): bool array = Screen.buffer t.screen
 
-let press_key (t: t) (key: int option) =
-  Option.iter (Printf.eprintf "PRESSED: 0x%X\n%!") key;
-  (* assert key < 0x10; *)
-  Option.iter (fun k -> t.keys.(k) <- true) key
-  (* t.pressed_key <- Option.map Uint8.of_int key *)
+let press_key (t: t) (key: int) (pressed: bool) =
+  t.keys.(key) <- pressed
 
 let fetch (t: t) =
   let opcode = Memory.read_uint16 t.memory ~pos:t.pc in
@@ -53,6 +50,7 @@ type instruction =
 | Set_delay of register
 | Set_vx_to_vy of register * register
 | Read_delay of register
+| Random of register * uint8
 | Add of register * uint8
 | Add_to_index of register
 | Add_vx_to_vy of register * register
@@ -102,6 +100,7 @@ let decode opcode =
   | (0x9, x, y, 0x0) -> Skip_if_vx_vy_ne (u8 x, u8 y)
   | (0xA, n1, n2, n3) -> Set_index (Nibbles.to_uint16 n1 n2 n3)
   | (0xB, n1, n2, n3) -> JumpV0 (Nibbles.to_uint16 n1 n2 n3)
+  | (0xC, x, n1, n2) -> Random (u8 x, Nibbles.to_uint8 n1 n2)
   | (0xD, x, y, n) -> Draw (u8 x, Uint8.of_int y, Uint8.of_int n)
   | (0xE, x, 0xA, 0x1) -> Skip_if_not_pressed (u8 x)
   | (0xE, x, 0x9, 0xE) -> Skip_if_pressed (u8 x)
@@ -133,6 +132,10 @@ let execute t instruction =
     write_register vx y
   | Read_delay vx ->
     write_register vx t.delay
+  | Random (vx, value) ->
+    (* 0x00 to 0xFF inclusive *)
+    let rand = Random.int (0xFF + 1) |> Uint8.of_int in
+    write_register vx (Uint8.logand rand value)
   | Add (vx, value) ->
     let x = read_register vx in
     write_register vx Uint8.(x + value)

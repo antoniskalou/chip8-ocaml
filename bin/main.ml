@@ -53,7 +53,27 @@ let draw_graphics buffer renderer =
     end);
   Sdl.render_present renderer
 
-let handle_event () =
+let scancode_to_key =
+  function
+  | `K1 -> Some 0x1
+  | `K2 -> Some 0x2
+  | `K3 -> Some 0x3
+  | `K4 -> Some 0xC
+  | `Q -> Some 0x4
+  | `W -> Some 0x5
+  | `E -> Some 0x6
+  | `R -> Some 0xD
+  | `A -> Some 0x7
+  | `S -> Some 0x8
+  | `D -> Some 0x9
+  | `F -> Some 0xE
+  | `Z -> Some 0xA
+  | `X -> Some 0x0
+  | `C -> Some 0xB
+  | `V -> Some 0xF
+  | _ -> None
+
+let handle_event cpu =
   let event = Sdl.Event.create () in
   if Sdl.poll_event (Some event) then begin
     match Sdl.Event.(get event typ |> enum) with
@@ -61,26 +81,17 @@ let handle_event () =
       let scancode = Sdl.Event.(get event keyboard_scancode) in
       (match Sdl.Scancode.enum scancode with
       | `Escape -> exit 0
-      | `K1 -> Some 0x1
-      | `K2 -> Some 0x2
-      | `K3 -> Some 0x3
-      | `K4 -> Some 0xC
-      | `Q -> Some 0x4
-      | `W -> Some 0x5
-      | `E -> Some 0x6
-      | `R -> Some 0xD
-      | `A -> Some 0x7
-      | `S -> Some 0x8
-      | `D -> Some 0x9
-      | `F -> Some 0xE
-      | `Z -> Some 0xA
-      | `X -> Some 0x0
-      | `C -> Some 0xB
-      | `V -> Some 0xF
-      | _ -> None)
+      | code ->
+        scancode_to_key code
+        |> Option.iter (fun k -> Cpu.press_key cpu k true))
+    | `Key_up ->
+      let scancode = Sdl.Event.(get event keyboard_scancode) in
+      Sdl.Scancode.enum scancode
+      |> scancode_to_key
+      |> Option.iter (fun k-> Cpu.press_key cpu k false)
     | `Quit -> exit 0
-    | _ -> None
-  end else None
+    | _ -> ()
+  end else ()
 
 let () =
   let argv = Sys.argv in
@@ -96,10 +107,10 @@ let () =
   let renderer = init_graphics () in
   let last_tick = ref 0. in
   while true do
+    (* handle events outside of timed loop as to not miss any events that
+      may happen while the timed cycle is waiting *)
+    handle_event cpu;
     if (Unix.gettimeofday () -. !last_tick) >= threshold then begin
-      (* handle events outside of timed loop as to not miss any events that
-        may happen while the timed cycle is waiting *)
-      handle_event () |> Cpu.press_key cpu;
       Cpu.tick cpu;
       clear_graphics renderer;
       draw_graphics (Cpu.screen_buffer cpu) renderer;
