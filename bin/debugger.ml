@@ -138,7 +138,6 @@ let execute_command ~cpu ~debug_state =
       else
         Printf.printf "released\n%!")
 
-
 let () =
   let argv = Sys.argv in
   if Array.length argv < 2 then begin
