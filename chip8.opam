@@ -12,6 +12,7 @@ depends: [
   "dune" {>= "3.12"}
   "stdint" {>= "0.7.2"}
   "tsdl" {>= "1.0.0"}
+  "tsdl-mixer" {>= "0.6"}
   "ppx_inline_test" {with-test}
   "odoc" {with-doc}
 ]

@@ -18,7 +18,7 @@ type cmd =
   | Print_registers
   | Load_file of uint16 * string
   | Key_set of int
-  | Key_unset
+  | Key_unset of int
   | Print_key
 
 let parse_command cmd_str =
@@ -39,8 +39,8 @@ let parse_command cmd_str =
     Some (Print_key)
   | ["ks"; k] | ["keyset"; k] ->
     Some (Key_set Uint8.(to_int (of_string k)))
-  | ["ku"] | ["keyunset"] ->
-    Some (Key_unset)
+  | ["ku"; k] | ["keyunset"; k] ->
+    Some (Key_unset Uint8.(to_int (of_string k)))
   | ["memset"; addr; value] ->
     (* TODO: handle errors *)
     Some (Memset (Uint16.of_string addr, Uint16.of_string value))
@@ -128,12 +128,15 @@ let execute_command ~cpu ~debug_state =
         set_value_in_memory ~memory:cpu.memory addr' opcode')
     with Sys_error e ->
       Printf.eprintf "Could not open file: %s\n%!" e)
-  | Key_set k -> Cpu.press_key cpu (Some k)
-  | Key_unset -> Cpu.press_key cpu None
+  | Key_set k -> Cpu.press_key cpu k true
+  | Key_unset k -> Cpu.press_key cpu k false
   | Print_key ->
-    (match cpu.pressed_key with
-    | Some k -> Printf.printf "Pressed: 0x%X\n%!" (Uint8.to_int k)
-    | None -> Printf.printf "No key pressed.\n%!")
+    cpu.keys |> Array.iteri (fun k pressed ->
+      Printf.printf "0x%X: " k;
+      if pressed then
+        Printf.printf "pressed\n%!"
+      else
+        Printf.printf "released\n%!")
 
 
 let () =
