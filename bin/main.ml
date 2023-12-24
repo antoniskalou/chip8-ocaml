@@ -16,11 +16,12 @@ open Chip8
     }
 end *)
 
-let target_mhz = 540.
-(* the threshold before a CPU tick happens. It is calculated as
-   1 / desired MHz *)
-let threshold = 1. /. target_mhz
 let render_scale = 20
+let target_fps = 60
+let target_mhz = 540
+(* the number of cycles that run before a refresh occurs *)
+let cycles_per_refresh = target_mhz / target_fps
+let refresh_per_second = (1. /. Float.of_int target_fps)
 
 let or_exit = function
   | Error (`Msg e) -> Sdl.log "%s" e; exit 1
@@ -111,6 +112,13 @@ let handle_event cpu =
     | _ -> ()
   end else ()
 
+let timed f =
+  let start = Unix.gettimeofday () in
+  f ();
+  Unix.gettimeofday () -. start
+
+let seconds_to_ms s = Int32.of_float (s *. 1000.)
+
 let () =
   let argv = Sys.argv in
   if Array.length argv < 2 then begin
@@ -126,16 +134,17 @@ let () =
   let cpu = Cpu.create memory in
   let audio = load_audio "bin/resources/buzz.wav" in
   let renderer = init_graphics () in
-  let last_tick = ref 0. in
   while true do
-    (* handle events outside of timed loop as to not miss any events that
-      may happen while the timed cycle is waiting *)
     handle_event cpu;
     clear_graphics renderer;
-    if (Unix.gettimeofday () -. !last_tick) >= threshold then begin
-      Cpu.tick cpu;
-      if Cpu.sound_playing cpu then play_audio audio;
-      last_tick := Unix.gettimeofday ()
-    end;
-    draw_graphics (Cpu.screen_buffer cpu) renderer
+    Cpu.update_timers cpu;
+    let elapsed =
+      timed (fun () ->
+        for i = 0 to cycles_per_refresh do
+          Cpu.tick cpu
+        done)
+    in
+    if Cpu.sound_playing cpu then play_audio audio;
+    draw_graphics (Cpu.screen_buffer cpu) renderer;
+    Sdl.delay (seconds_to_ms (refresh_per_second -. elapsed))
   done

@@ -271,13 +271,16 @@ let execute t instruction =
 let sound_playing t =
   Uint8.compare t.sound (Uint8.of_int 2) = 1
 
-let tick t =
+(* update game timers, this is expected to be called at 60MHz *)
+let update_timers t =
   (* FIXME: this doesn't time correctly, depends on mainloop
      running at exactly 60Hz *)
   if Uint8.compare t.delay Uint8.zero = 1 then
     t.delay <- Uint8.pred t.delay;
   if Uint8.compare t.sound Uint8.zero = 1 then
-    t.sound <- Uint8.pred t.sound;
+    t.sound <- Uint8.pred t.sound
+
+let tick t =
   fetch t
   |> decode
   |> execute t
