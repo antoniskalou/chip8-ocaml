@@ -2,54 +2,75 @@ open Stdint
 open Chip8
 
 let string_of_opcode opcode =
-  let nn_to_string n1 n2 =
-    Nibbles.to_uint8 n1 n2
-    |> Uint8.to_int
-    |> Printf.sprintf "%X"
-  in
-  let nnn_to_string n1 n2 n3 =
-    Nibbles.to_uint16 n1 n2 n3
-    |> Uint16.to_int
-    |> Printf.sprintf "%X"
-  in
-  (* see http://johnearnest.github.io/Octo/docs/chip8ref.pdf *)
-  match Nibbles.of_uint16 opcode with
-  | (0x0, 0x0, 0xE, 0x0) -> "CLEAR"
-  | (0x0, 0x0, 0xE, 0xE) -> "RETURN"
-  | (0x1, n1, n2, n3) -> Printf.sprintf "JUMP %s" (nnn_to_string n1 n2 n3)
-  | (0x2, n1, n2, n3) -> Printf.sprintf "CALL %s" (nnn_to_string n1 n2 n3)
-  | (0x3, x, n1, n2) -> Printf.sprintf "IF V%i != %s THEN" x (nn_to_string n1 n2)
-  | (0x4, x, n1, n2) -> Printf.sprintf "IF V%i == %s THEN" x (nn_to_string n1 n2)
-  | (0x5, x, y, 0x0) -> Printf.sprintf "IF V%i != V%i THEN" x y
-  | (0x6, x, n1, n2) -> Printf.sprintf "V%i := %s" x (nn_to_string n1 n2)
-  | (0x7, x, n1, n2) -> Printf.sprintf "V%i += %s" x (nn_to_string n1 n2)
-  | (0x8, x, y, 0x0) -> Printf.sprintf "V%i := V%i" x y
-  | (0x8, x, y, 0x1) -> Printf.sprintf "V%i |= V%i" x y
-  | (0x8, x, y, 0x2) -> Printf.sprintf "V%i &= V%i" x y
-  | (0x8, x, y, 0x3) -> Printf.sprintf "V%i ^= V%i" x y
-  | (0x8, x, y, 0x4) -> Printf.sprintf "V%i += V%i" x y
-  | (0x8, x, y, 0x5) -> Printf.sprintf "V%i -= V%i" x y
-  | (0x8, x, y, 0x6) -> Printf.sprintf "V%i >>= V%i" x y
-  | (0x8, x, y, 0x7) -> Printf.sprintf "V%i =- V%i" x y
-  | (0x8, x, y, 0xE) -> Printf.sprintf "V%i <<= V%i" x y
-  | (0x9, x, y, 0x0) -> Printf.sprintf "IF V%i == V%i THEN" x y
-  | (0xA, n1, n2, n3) -> Printf.sprintf "I := %s" (nnn_to_string n1 n2 n3)
-  | (0xB, n1, n2, n3) -> Printf.sprintf "JUMP0 %s" (nnn_to_string n1 n2 n3)
-  | (0xC, x, n1, n2) -> Printf.sprintf "V%i := RANDOM %s" x (nn_to_string n1 n2)
-  | (0xD, x, y, n) -> Printf.sprintf "DRAW V%i V%i %i" x y n
-  | (0xE, x, 0x9, 0xE) -> Printf.sprintf "IF V%i -KEY THEN" x
-  | (0xE, x, 0xA, 0x1) -> Printf.sprintf "IF V%i KEY THEN" x
-  | (0xF, x, 0x0, 0x7) -> Printf.sprintf "V%i := DELAY" x
-  | (0xF, x, 0x0, 0xA) -> Printf.sprintf "V%i := KEY" x
-  | (0xF, x, 0x1, 0x5) -> Printf.sprintf "DELAY := V%i" x
-  | (0xF, x, 0x1, 0x8) -> Printf.sprintf "BUZZER := V%i" x
-  | (0xF, x, 0x1, 0xE) -> Printf.sprintf "I += V%i" x
-  | (0xF, x, 0x2, 0x9) -> Printf.sprintf "I :=  V%i" x
-  | (0xF, x, 0x3, 0x3) -> Printf.sprintf "BCD V%i" x
-  | (0xF, x, 0x5, 0x5) -> Printf.sprintf "SAVE V%i" x
-  | (0xF, x, 0x6, 0x5) -> Printf.sprintf "LOAD V%i" x
-  | _ ->
-    Printf.sprintf "<UNKNOWN> %04X" (Uint16.to_int opcode)
+  let u8i = Uint8.to_int in
+  let u16i = Uint16.to_int in
+  (* see http://devernay.free.fr/hacks/chip8/C8TECH10.HTM for syntax,
+     i have made minor adjustments to make it easier to parse.
+
+     I don't use commas and I also rename some commands to be easier
+     to read, e.g. LD F VX to LD FONT VX*)
+  match Cpu.decode opcode with
+  | Clear -> "CLS"
+  | Return -> "RET"
+  | Jump addr -> Printf.sprintf "JP %04X" (u16i addr)
+  | Call addr -> Printf.sprintf "CALL %04X" (u16i addr)
+  | Skip_if_eq (vx, value) ->
+    Printf.sprintf "SE V%X %02X" (u8i vx) (u8i value)
+  | Skip_if_ne (vx, value) ->
+    Printf.sprintf "SNE V%X %02X" (u8i vx) (u8i value)
+  | Skip_if_vx_vy_eq (vx, vy) ->
+    Printf.sprintf "SE V%X V%X" (u8i vx) (u8i vy)
+  | Set (vx, value) ->
+    Printf.sprintf "LD V%X %02X" (u8i vx) (u8i value)
+  | Add (vx, value) ->
+    Printf.sprintf "ADD V%X %02X" (u8i vx) (u8i value)
+  | Set_vx_to_vy (vx, vy) ->
+    Printf.sprintf "LD V%X V%X" (u8i vx) (u8i vy)
+  | Binary_or (vx, vy) ->
+    Printf.sprintf "OR V%X V%X" (u8i vx) (u8i vy)
+  | Binary_and (vx, vy) ->
+    Printf.sprintf "AND V%X V%X" (u8i vx) (u8i vy)
+  | Binary_xor (vx, vy) ->
+    Printf.sprintf "XOR V%X V%X" (u8i vx) (u8i vy)
+  | Add_vx_to_vy (vx, vy) ->
+    Printf.sprintf "ADD V%X V%X" (u8i vx) (u8i vy)
+  | Subtract_vy_from_vx (vx, vy) ->
+    Printf.sprintf "SUB V%X V%X" (u8i vx) (u8i vy)
+  | Shift_right (vx, vy) ->
+    Printf.sprintf "SHR V%X V%X" (u8i vx) (u8i vy)
+  | Subtract_vx_from_vy (vx, vy) ->
+    Printf.sprintf "SUBN V%X V%X" (u8i vx) (u8i vy)
+  | Shift_left (vx, vy) ->
+    Printf.sprintf "SHL V%i V%i" (u8i vx) (u8i vy)
+  | Skip_if_vx_vy_ne (vx, vy) ->
+    Printf.sprintf "SNE V%X V%X" (u8i vx) (u8i vy)
+  | Set_index addr ->
+    Printf.sprintf "LD I %04X" (u16i addr)
+  | JumpV0 addr ->
+    Printf.sprintf "JPV0 %04X" (u16i addr)
+  | Random (vx, value) ->
+    Printf.sprintf "RND V%X %02X" (u8i vx) (u8i value)
+  | Draw (vx, vy, n) ->
+    Printf.sprintf "DRW V%X V%X %i" (u8i vx) (u8i vy) (u8i n)
+  | Skip_if_not_pressed vx ->
+    Printf.sprintf "SKP V%X" (u8i vx)
+  | Skip_if_pressed vx ->
+    Printf.sprintf "SKNP V%X" (u8i vx)
+  | Read_delay vx ->
+    Printf.sprintf "LD V%X DELAY" (u8i vx)
+  | Wait_until_pressed vx ->
+    Printf.sprintf "LD V%X KEY" (u8i vx)
+  | Set_delay vx ->
+    Printf.sprintf "LD DELAY V%X" (u8i vx)
+  | Set_sound vx ->
+    Printf.sprintf "LD SOUND V%X" (u8i vx)
+  | Add_to_index vx ->
+    Printf.sprintf "ADD I V%X" (u8i vx)
+  | Set_font vx ->
+    Printf.sprintf "LD FONT V%X" (u8i vx)
+  | Bcd vx -> Printf.sprintf "LD BCD V%X" (u8i vx)
+  | Store vx -> Printf.sprintf "LD [I] V%X" (u8i vx)
+  | Load vx  -> Printf.sprintf "LD V%X [I]" (u8i vx)
 
 let () =
   let argv = Sys.argv in
@@ -63,8 +84,11 @@ let () =
     let (b1, b2) = (Bytes.get_uint8 rom !pc, Bytes.get_uint8 rom (!pc + 1)) in
     (* b1 << 8 | b2 *)
     let opcode = Uint16.of_int ((b1 lsl 8) lor b2) in
-    Printf.printf "%04X: %s\n"
-      (!pc + 0x200) (* ROM is expecting to be at address 200 *)
-      (string_of_opcode opcode);
+    let opcode_s =
+      try string_of_opcode opcode
+      with Cpu.Unknown_opcode (_, opcode) ->
+        Printf.sprintf "%04X" (Uint16.to_int opcode)
+    in
+    Printf.printf "%s\n" opcode_s;
     pc := !pc + 2
   done
