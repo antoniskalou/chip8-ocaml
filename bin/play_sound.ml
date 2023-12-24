@@ -13,7 +13,7 @@ let play_until_done audio =
 let () =
   let file = Sys.argv.(1) in
   Printf.eprintf "Initializing SDL2.\n";
-  Sdl.init Sdl.Init.audio |> or_exit;
+  (* Sdl.init Sdl.Init.audio |> or_exit; *)
   Printf.eprintf "Initializing mixer.\n";
   Mixer.(init Init.empty) |> or_exit |> ignore;
   Mixer.open_audio

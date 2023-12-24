@@ -5,7 +5,8 @@
  (libraries
   chip8
   stdint
-  tsdl))
+  tsdl
+  tsdl-mixer))
 
 (executable
  (name disassembler)

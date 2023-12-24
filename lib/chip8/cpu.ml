@@ -269,7 +269,7 @@ let execute t instruction =
     | None -> t.pc <- Uint16.(t.pc - of_int 2))
 
 let sound_playing t =
-  Uint8.compare t.sound Uint8.zero = 1
+  Uint8.compare t.sound (Uint8.of_int 2) = 1
 
 let tick t =
   (* FIXME: this doesn't time correctly, depends on mainloop

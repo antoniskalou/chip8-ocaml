@@ -1,8 +1,9 @@
 open Tsdl
+open Tsdl_mixer
 open Stdint
 open Chip8
 
-module Emulator = struct
+(* module Emulator = struct
   type config =
     { render_scale : int
     ; bg_color : uint32
@@ -13,19 +14,22 @@ module Emulator = struct
     { cpu : Cpu.t
     ; memory : Memory.t
     }
-end
+end *)
 
+let target_mhz = 540.
 (* the threshold before a CPU tick happens. It is calculated as
-   1 / desired FPS *)
-let threshold = 1. /. 400.
+   1 / desired MHz *)
+let threshold = 1. /. target_mhz
 let render_scale = 20
 
 let or_exit = function
   | Error (`Msg e) -> Sdl.log "%s" e; exit 1
   | Ok x -> x
 
+let init_sdl2 () =
+  Sdl.init Sdl.Init.(video + events + audio) |> or_exit
+
 let init_graphics () =
-  Sdl.init Sdl.Init.(video + events + audio) |> or_exit;
   let w =
     Sdl.create_window
       ~w:(64 * render_scale) ~h:(32 * render_scale)
@@ -52,6 +56,20 @@ let draw_graphics buffer renderer =
       Sdl.render_fill_rect renderer (Some rect) |> or_exit
     end);
   Sdl.render_present renderer
+
+let init_audio () =
+  Mixer.(init Init.empty) |> or_exit |> ignore;
+  Mixer.open_audio
+    Mixer.default_frequency
+    Mixer.default_format
+    Mixer.default_channels
+    4096
+    |> or_exit
+
+let load_audio file = Mixer.load_wav file |> or_exit
+
+let play_audio audio =
+  Mixer.play_channel 0 audio 0 |> or_exit |> ignore
 
 let scancode_to_key =
   function
@@ -99,21 +117,25 @@ let () =
     Printf.eprintf "Usage: %s <ROM FILE>\n" Sys.executable_name;
     exit 2
   end;
+  init_sdl2 ();
+  init_audio();
   let rom = Rom.load argv.(1) in
   let memory = Memory.create () in
   Memory.load memory ~src:Fonts.fonts ~pos:Uint16.zero;
   Memory.load memory ~src:rom ~pos:Memory.rom_base_address;
   let cpu = Cpu.create memory in
+  let audio = load_audio "bin/resources/buzz.wav" in
   let renderer = init_graphics () in
   let last_tick = ref 0. in
   while true do
     (* handle events outside of timed loop as to not miss any events that
       may happen while the timed cycle is waiting *)
     handle_event cpu;
+    clear_graphics renderer;
     if (Unix.gettimeofday () -. !last_tick) >= threshold then begin
       Cpu.tick cpu;
-      clear_graphics renderer;
-      draw_graphics (Cpu.screen_buffer cpu) renderer;
+      if Cpu.sound_playing cpu then play_audio audio;
       last_tick := Unix.gettimeofday ()
-    end
+    end;
+    draw_graphics (Cpu.screen_buffer cpu) renderer
   done
