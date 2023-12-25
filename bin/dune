@@ -9,6 +9,11 @@
   tsdl-mixer))
 
 (executable
+  (name assembler)
+  (modules assembler)
+  (libraries chip8 stdint))
+
+(executable
  (name disassembler)
  (modules disassembler)
  (libraries chip8 stdint))
