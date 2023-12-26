@@ -18,20 +18,21 @@ let audio_callback output =
   (* number of samples * channels *)
   for i = 0 to Array1.dim output - 1 do
     let x = Float.(2. *. pi *. !time *. frequency) in
-    output.{i} <- volume *. sin x;
-    Printf.printf "x = %f, sin(x) = %f, output = %f\n%!" x (sin x) output.{i};
+    output.{i} <- Int.of_float (128. *. volume *. sin x) + 128;
+    Printf.printf "x = %f, sin(x) = %f, output = %i\n%!" x (sin x) output.{i};
     time := !time +. (1. /. (Float.of_int audio_freq));
   done
 
 let audio_spec : Sdl.audio_spec =
   { as_freq = audio_freq
-  ; as_format = Sdl.Audio.f32
+  ; as_format = Sdl.Audio.u8
   ; as_channels = 1
   ; as_samples = audio_samples
   ; as_silence = 0
-  ; as_size = Int32.of_int audio_samples (* 1 channel with 1 byte, no need to multiply *)
+  (* 1 channel with 1 byte, no need to multiply *)
+  ; as_size = Int32.of_int audio_samples
   ; as_callback =
-      Some (Sdl.audio_callback Bigarray.float32 audio_callback)
+      Some (Sdl.audio_callback Bigarray.int8_unsigned audio_callback)
   }
 
 let () =
