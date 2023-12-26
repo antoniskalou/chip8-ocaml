@@ -1,3 +1,3 @@
 (library
  (name chip8)
- (libraries stdint))
+ (libraries stdint tsdl))
