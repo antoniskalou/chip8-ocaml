@@ -10,15 +10,21 @@ let audio_samples = 512
 
 let time = ref 0.0
 
+let square_wave angle =
+  let tau = Float.pi *. 2. in
+  if (mod_float angle tau) < Float.pi
+  then 1.0
+  else -1.0
+
 let audio_callback output =
   let open Bigarray in
-  let volume = 0.2 in
+  let volume = 0.1 in
   let frequency = 200. in
   Printf.printf "Sampling %i bytes...\n" (Array1.dim output);
   (* number of samples * channels *)
   for i = 0 to Array1.dim output - 1 do
     let x = Float.(2. *. pi *. !time *. frequency) in
-    output.{i} <- Int.of_float (128. *. volume *. sin x) + 128;
+    output.{i} <- Int.of_float (128. *. volume *. square_wave x) + 128;
     Printf.printf "x = %f, sin(x) = %f, output = %i\n%!" x (sin x) output.{i};
     time := !time +. (1. /. (Float.of_int audio_freq));
   done
@@ -46,6 +52,7 @@ let () =
     match Sdl.Event.(enum (get e typ)) with
     | `Quit ->
       Sdl.pause_audio_device device true;
+      Sdl.close_audio_device device;
       Sdl.destroy_window window;
       Sdl.quit ()
     | _ -> loop ()
