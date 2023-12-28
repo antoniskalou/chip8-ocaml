@@ -28,13 +28,22 @@ let audio_callback state output =
       state.time <- state.time +. (1. /. (Float.of_int default_freq));
       volume *. square_wave x)
 
+let audio_thread device_id =
+  let open Bigarray in
+  let state = { volume = 0.1; frequency = 200.; time = 0. } in
+  let output = Array1.create int8_unsigned c_layout default_samples in
+  while true do
+    audio_callback state output;
+    match Sdl.queue_audio device_id output with
+    | Ok () -> ()
+    | Error (`Msg e) -> failwith e
+  done
+
 type t =
-  { device_id : int32
-  ; state : callback_state
-  }
+  { device_id : int32 }
 
 let create ~volume ~frequency =
-  let state = { volume; frequency; time = 0.} in
+  let _state = { volume; frequency; time = 0.} in
   let audio_spec : Sdl.audio_spec =
     { as_freq = default_freq
     ; as_format = Sdl.Audio.u8
@@ -43,13 +52,13 @@ let create ~volume ~frequency =
     ; as_silence = 0
     (* 1 channel with 1 byte, no need to multiply *)
     ; as_size = Int32.of_int default_samples
-    ; as_callback =
-        Some (Sdl.audio_callback Bigarray.int8_unsigned
-                (audio_callback state))
+    ; as_callback = None
     }
   in
   Sdl.open_audio_device None false audio_spec 0
-  |> Result.map (fun (device_id, _) -> { device_id; state })
+  |> Result.map (fun (device_id, _) ->
+      let _thread = Domain.spawn (fun () -> audio_thread device_id) in
+      { device_id })
 
 let play { device_id; _ } =
   Sdl.pause_audio_device device_id false
@@ -57,8 +66,8 @@ let play { device_id; _ } =
 let pause { device_id; _ } =
   Sdl.pause_audio_device device_id true
 
-let stop { device_id; state } =
-  Sdl.pause_audio_device device_id true;
-  Sdl.lock_audio_device device_id;
-  state.time <- 0.;
-  Sdl.unlock_audio_device device_id
+(* let stop { device_id; state } = *)
+(*   Sdl.pause_audio_device device_id true; *)
+(*   Sdl.lock_audio_device device_id; *)
+(*   state.time <- 0.; *)
+(*   Sdl.unlock_audio_device device_id *)
