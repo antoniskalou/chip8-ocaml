@@ -22,7 +22,8 @@ let target_mhz = 540
 let cycles_per_refresh = target_mhz / target_fps
 let refresh_per_second = (1. /. Float.of_int target_fps)
 
-let or_exit = function
+let or_exit =
+  function
   | Error (`Msg e) -> Sdl.log "%s" e; exit 1
   | Ok x -> x
 
@@ -116,7 +117,7 @@ let () =
   Memory.load memory ~src:Fonts.fonts ~pos:Uint16.zero;
   Memory.load memory ~src:rom ~pos:Memory.rom_base_address;
   let cpu = Cpu.create memory in
-  let buzzer = Buzzer.create ~volume:0.05 ~frequency:200. |> or_exit in
+  let buzzer = Buzzer.create ~volume:0.2 ~frequency:200. |> or_exit in
   let renderer = init_graphics () in
   while true do
     handle_event cpu;

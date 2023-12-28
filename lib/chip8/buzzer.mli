@@ -8,3 +8,5 @@ val create
 val play : t -> unit
 
 val pause : t -> unit
+
+val stop : t -> unit

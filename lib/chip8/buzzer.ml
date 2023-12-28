@@ -1,6 +1,6 @@
 open Tsdl
 
-let default_freq = 8000
+let default_freq = 44100
 let default_samples = 512
 
 let square_wave angle =
@@ -9,6 +9,12 @@ let square_wave angle =
   then 1.0
   else -1.0
 
+let fill_buffer sampler output =
+  let open Bigarray in
+  for i = 0 to Array1.dim output - 1 do
+    output.{i} <- Int.of_float (128. *. sampler ()) + 128;
+  done
+
 type callback_state =
   { volume : float
   ; frequency : float
@@ -16,16 +22,16 @@ type callback_state =
   }
 
 let audio_callback state output =
-  let open Bigarray in
   let { volume; frequency; _ } = state in
-  (* number of samples * channels *)
-  for i = 0 to Array1.dim output - 1 do
-    let x = Float.(2. *. pi *. state.time *. frequency) in
-    output.{i} <- Int.of_float (128. *. volume *. square_wave x) + 128;
-    state.time <- state.time +. (1. /. (Float.of_int default_freq));
-  done
+  output |> fill_buffer (fun () ->
+      let x = Float.(2. *. pi *. state.time *. frequency) in
+      state.time <- state.time +. (1. /. (Float.of_int default_freq));
+      volume *. square_wave x)
 
-type t = { device_id : int32 }
+type t =
+  { device_id : int32
+  ; state : callback_state
+  }
 
 let create ~volume ~frequency =
   let state = { volume; frequency; time = 0.} in
@@ -43,17 +49,16 @@ let create ~volume ~frequency =
     }
   in
   Sdl.open_audio_device None false audio_spec 0
-  |> Result.map (fun (device_id, _) -> { device_id })
-
+  |> Result.map (fun (device_id, _) -> { device_id; state })
 
 let play { device_id; _ } =
-  let status = Sdl.get_audio_device_status device_id in
-  if status <> Sdl.Audio.playing then begin
-    Sdl.pause_audio_device device_id false
-  end
+  Sdl.pause_audio_device device_id false
 
 let pause { device_id; _ } =
-  let status = Sdl.get_audio_device_status device_id in
-  if status = Sdl.Audio.playing then begin
-    Sdl.pause_audio_device device_id true
-  end
+  Sdl.pause_audio_device device_id true
+
+let stop { device_id; state } =
+  Sdl.pause_audio_device device_id true;
+  Sdl.lock_audio_device device_id;
+  state.time <- 0.;
+  Sdl.unlock_audio_device device_id
