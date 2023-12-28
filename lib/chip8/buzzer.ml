@@ -17,20 +17,18 @@ type callback_state =
 
 let audio_callback state output =
   let open Bigarray in
-  let { volume; frequency; time } = state in
-  Printf.printf "Sampling %i bytes...\n" (Array1.dim output);
+  let { volume; frequency; _ } = state in
   (* number of samples * channels *)
   for i = 0 to Array1.dim output - 1 do
-    let x = Float.(2. *. pi *. time *. frequency) in
+    let x = Float.(2. *. pi *. state.time *. frequency) in
     output.{i} <- Int.of_float (128. *. volume *. square_wave x) + 128;
-    Printf.printf "x = %f, sin(x) = %f, output = %i\n%!" x (sin x) output.{i};
-    state.time <- time +. (1. /. (Float.of_int default_freq));
+    state.time <- state.time +. (1. /. (Float.of_int default_freq));
   done
 
 type t = { device_id : int32 }
 
 let create ~volume ~frequency =
-  let state = { volume; frequency; time = 0. } in
+  let state = { volume; frequency; time = 0.} in
   let audio_spec : Sdl.audio_spec =
     { as_freq = default_freq
     ; as_format = Sdl.Audio.u8
@@ -49,7 +47,13 @@ let create ~volume ~frequency =
 
 
 let play { device_id; _ } =
-  Sdl.pause_audio_device device_id false
+  let status = Sdl.get_audio_device_status device_id in
+  if status <> Sdl.Audio.playing then begin
+    Sdl.pause_audio_device device_id false
+  end
 
 let pause { device_id; _ } =
-  Sdl.pause_audio_device device_id true
+  let status = Sdl.get_audio_device_status device_id in
+  if status = Sdl.Audio.playing then begin
+    Sdl.pause_audio_device device_id true
+  end

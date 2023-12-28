@@ -61,7 +61,7 @@ end
 
 let () =
   Sdl.init Sdl.Init.(video + events + audio) |> or_exit;
-  let window = Sdl.create_window ~w:640 ~h:480 "Audio Test" Sdl.Window.vulkan |> or_exit in
+  let _ = Sdl.create_window ~w:640 ~h:480 "Audio Test" Sdl.Window.vulkan |> or_exit in
   let audio = Buzzer.create { volume = 0.01; frequency = 200. } |> or_exit in
   Buzzer.play audio;
   let e = Sdl.Event.create () in
@@ -69,9 +69,6 @@ let () =
     Sdl.wait_event (Some e) |> or_exit;
     match Sdl.Event.(enum (get e typ)) with
     | `Quit ->
-      Buzzer.pause audio;
-      (* Sdl.close_audio_device device; *)
-      Sdl.destroy_window window;
       Sdl.quit ()
     | _ -> loop ()
   in

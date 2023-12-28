@@ -1,5 +1,4 @@
 open Tsdl
-open Tsdl_mixer
 open Stdint
 open Chip8
 
@@ -58,20 +57,6 @@ let draw_graphics buffer renderer =
     end);
   Sdl.render_present renderer
 
-let init_audio () =
-  Mixer.(init Init.empty) |> or_exit |> ignore;
-  Mixer.open_audio
-    Mixer.default_frequency
-    Mixer.default_format
-    Mixer.default_channels
-    4096
-    |> or_exit
-
-let load_audio file = Mixer.load_wav file |> or_exit
-
-let play_audio audio =
-  Mixer.play_channel 0 audio 0 |> or_exit |> ignore
-
 let scancode_to_key =
   function
   | `K1 -> Some 0x1
@@ -126,13 +111,12 @@ let () =
     exit 2
   end;
   init_sdl2 ();
-  init_audio();
   let rom = Rom.load argv.(1) in
   let memory = Memory.create () in
   Memory.load memory ~src:Fonts.fonts ~pos:Uint16.zero;
   Memory.load memory ~src:rom ~pos:Memory.rom_base_address;
   let cpu = Cpu.create memory in
-  let audio = load_audio "bin/resources/buzz.wav" in
+  let buzzer = Buzzer.create ~volume:0.05 ~frequency:200. |> or_exit in
   let renderer = init_graphics () in
   while true do
     handle_event cpu;
@@ -144,7 +128,9 @@ let () =
           Cpu.tick cpu
         done)
     in
-    if Cpu.sound_playing cpu then play_audio audio;
+    if Cpu.sound_playing cpu
+    then Buzzer.play buzzer
+    else Buzzer.pause buzzer;
     draw_graphics (Cpu.screen_buffer cpu) renderer;
     Sdl.delay (seconds_to_ms (refresh_per_second -. elapsed))
   done

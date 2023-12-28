@@ -5,14 +5,13 @@ description: "A chip8 virtual machine written in OCaml"
 maintainer: ["Antonis Kalou"]
 authors: ["Antonis Kalou <kalouantonis@protonmail.com>"]
 license: "GPL-3.0-only"
-homepage: "https://github.com/username/reponame"
-bug-reports: "https://github.com/username/reponame/issues"
+homepage: "https://github.com/antoniskalou/chip8-ocaml"
+bug-reports: "https://github.com/antoniskalou/chip8-ocaml/issues"
 depends: [
   "ocaml" {>= "5.0.0"}
   "dune" {>= "3.12"}
   "stdint" {>= "0.7.2"}
   "tsdl" {>= "1.0.0"}
-  "tsdl-mixer" {>= "0.6"}
   "ppx_inline_test" {with-test}
   "odoc" {with-doc}
 ]
@@ -30,4 +29,4 @@ build: [
     "@doc" {with-doc}
   ]
 ]
-dev-repo: "git+https://github.com/username/reponame.git"
+dev-repo: "git+https://github.com/antoniskalou/chip8-ocaml.git"
