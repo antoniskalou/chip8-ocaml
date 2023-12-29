@@ -1,9 +1,7 @@
+type config = { volume : float; frequency : float }
 type t
 
-val create
-  : volume:float
-  -> frequency:float
-  -> (t, [`Msg of string]) result
+val create : config -> (t, [`Msg of string]) result
 
 val play : t -> unit
 
