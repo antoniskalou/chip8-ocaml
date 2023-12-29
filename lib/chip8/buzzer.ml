@@ -36,15 +36,11 @@ let audio_thread device_id =
     if Sdl.get_audio_device_status device_id = Sdl.Audio.playing then begin
       audio_callback state output;
       (match Sdl.queue_audio device_id output with
-      | Ok () -> ()
-      | Error (`Msg e) -> failwith e);
-      let queued = Sdl.get_queued_audio_size device_id in
-      Printf.printf "Queued: %i\n%!" queued;
-      (* wait for the audio device to drain *)
-      Thread.delay Float.(of_int queued /. of_int default_freq)
-    end else
-      (* nothing to do, wait for a bit *)
-      Thread.delay Float.(of_int default_samples /. of_int default_freq)
+        | Ok () -> ()
+        | Error (`Msg e) -> failwith e);
+    end;
+    (* wait for the device to drain, based off SDL_RunAudio *)
+    Thread.delay Float.(of_int default_samples /. of_int default_freq)
   done
 
 type t =
