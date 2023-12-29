@@ -1,6 +1,6 @@
 open Tsdl
 
-let default_freq = 44100
+let default_freq = 8000
 let default_samples = 512
 
 let square_wave angle =
@@ -30,13 +30,14 @@ let audio_callback state output =
 
 let audio_thread device_id =
   let open Bigarray in
-  let state = { volume = 0.1; frequency = 200.; time = 0. } in
+  let state = { volume = 0.00; frequency = 200.; time = 0. } in
   let output = Array1.create int8_unsigned c_layout default_samples in
   while true do
     audio_callback state output;
-    match Sdl.queue_audio device_id output with
+    (match Sdl.queue_audio device_id output with
     | Ok () -> ()
-    | Error (`Msg e) -> failwith e
+    | Error (`Msg e) -> failwith e);
+    Thread.delay Float.(of_int default_samples /. (of_int default_freq))
   done
 
 type t =

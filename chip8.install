@@ -1,0 +1,11 @@
+lib: [
+  "_build/install/default/lib/chip8/META"
+  "_build/install/default/lib/chip8/dune-package"
+  "_build/install/default/lib/chip8/opam"
+]
+bin: [
+  "_build/install/default/bin/chip8"
+]
+doc: [
+  "_build/install/default/doc/chip8/README.md"
+]
