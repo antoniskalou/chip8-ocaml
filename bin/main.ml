@@ -98,11 +98,6 @@ let handle_event cpu =
     | _ -> ()
   end else ()
 
-let timed f =
-  let start = Unix.gettimeofday () in
-  f ();
-  Unix.gettimeofday () -. start
-
 let seconds_to_ms s = Int32.of_float (s *. 1000.)
 
 let () =
@@ -124,7 +119,7 @@ let () =
     clear_graphics renderer;
     Cpu.update_timers cpu;
     let elapsed =
-      timed (fun () ->
+      Util.timed (fun () ->
         for i = 0 to cycles_per_refresh do
           Cpu.tick cpu
         done)

@@ -35,14 +35,21 @@ let audio_thread device_id ~state =
   let freq = state.spec.as_freq in
   let output = Array1.create int8_unsigned c_layout samples in
   while true do
-    if Sdl.get_audio_device_status device_id = Sdl.Audio.playing then begin
-      audio_callback ~state output;
-      (match Sdl.queue_audio device_id output with
-        | Ok () -> ()
-        | Error (`Msg e) -> failwith e);
-    end;
+    (* GC pausing causes delays in execution, causing audio to skip. We can get
+       around this (sort of) by reducing the audio drain time by the amount of
+       time the sampler took to execute (including GC cycles). *)
+    let elapsed =
+      Util.timed (fun () ->
+        if Sdl.get_audio_device_status device_id = Sdl.Audio.playing then begin
+          audio_callback ~state output;
+          (match Sdl.queue_audio device_id output with
+           | Ok () -> ()
+           | Error (`Msg e) -> failwith e)
+        end)
+    in
     (* wait for the device to drain, based off SDL_RunAudio *)
-    Thread.delay Float.(of_int samples /. of_int freq)
+    let time_to_wait = Float.(of_int samples /. of_int freq) -. elapsed in
+    if time_to_wait > 0. then Thread.delay time_to_wait
   done
 
 let default_freq = 8000
@@ -69,9 +76,9 @@ let create config =
 
         According to this issue https://github.com/dbuenzli/tsdl/issues/13 this
         is fixed, but the issue still seems to exist. *)
-      let _thread = Domain.spawn (fun () ->
+      let _thread = Thread.create (fun () ->
           let state = { config; spec; time = 0.} in
-          audio_thread device_id ~state)
+          audio_thread device_id ~state) ()
       in
       { device_id })
 
