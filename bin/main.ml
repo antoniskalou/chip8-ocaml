@@ -127,9 +127,9 @@ let print_license () =
 let usage_msg = "chip8 <ROM FILE>"
 
 let rom_file = ref ""
-let fg_color = ref ""
-let bg_color = ref ""
-let render_scale = ref 1
+let fg_color = ref "0x00FF00"
+let bg_color = ref "0x000000"
+let render_scale = ref 20
 
 let anon_fun path = rom_file := path
 
