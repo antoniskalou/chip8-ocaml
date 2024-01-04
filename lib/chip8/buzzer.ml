@@ -76,9 +76,9 @@ let create config =
 
         According to this issue https://github.com/dbuenzli/tsdl/issues/13 this
         is fixed, but the issue still seems to exist. *)
-      let _thread = Thread.create (fun () ->
+      let _thread = Domain.spawn (fun () ->
           let state = { config; spec; time = 0.} in
-          audio_thread device_id ~state) ()
+          audio_thread device_id ~state)
       in
       { device_id })
 
