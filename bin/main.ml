@@ -162,7 +162,6 @@ let parse_args () =
 let () =
   let config = parse_args () in
   print_license ();
-
   init_sdl2 ();
   let rom = Rom.load !rom_file in
   let memory = Memory.create () in
