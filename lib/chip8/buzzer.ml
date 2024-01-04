@@ -52,7 +52,7 @@ let audio_thread device_id ~state =
     if time_to_wait > 0. then Thread.delay time_to_wait
   done
 
-let default_freq = 8000
+let default_freq = 44100
 let default_samples = 512
 
 type t = { device_id : int32 }
