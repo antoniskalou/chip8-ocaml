@@ -17,11 +17,6 @@
  (modules debugger)
  (libraries chip8))
 
-(executable
-  (name sample_audio)
-  (modules sample_audio)
-  (libraries chip8 tsdl))
-
 (env
   (dev
     (flags (:standard -warn-error -A)))
