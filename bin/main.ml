@@ -119,15 +119,33 @@ let print_license () =
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
   |}
 
-let () =
-  let argv = Sys.argv in
-  if Array.length argv < 2 then begin
-    Printf.eprintf "Usage: %s <ROM FILE>\n" Sys.executable_name;
+let usage_msg = "chip8 <ROM FILE>"
+
+let rom_file = ref ""
+let fg_color = ref ""
+let bg_color = ref ""
+let render_scale = ref 1
+
+let anon_fun path = rom_file := path
+
+let speclist =
+  [("-fg", Arg.Set_string fg_color, "Set the foreground render colour (uses hex format)");
+   ("-bg", Arg.Set_string bg_color, "Set the background render colour (uses hex format)");
+   ("-scale", Arg.Set_int render_scale, "Set the render scale, defaults to 64x32 (original resolution)")]
+
+let parse_args () =
+  Arg.parse speclist anon_fun usage_msg;
+  if String.equal String.empty !rom_file then begin
+    Printf.eprintf "ERROR: ROM file not provided!\n\n";
+    Arg.usage speclist usage_msg;
     exit 2
-  end;
+  end
+
+let () =
+  parse_args ();
   print_license ();
   init_sdl2 ();
-  let rom = Rom.load argv.(1) in
+  let rom = Rom.load !rom_file in
   let memory = Memory.create () in
   Memory.load memory ~src:Fonts.fonts ~pos:Uint16.zero;
   Memory.load memory ~src:rom ~pos:Memory.rom_base_address;
@@ -140,7 +158,7 @@ let () =
     Cpu.update_timers cpu;
     let elapsed =
       Util.timed (fun () ->
-        for i = 0 to cycles_per_refresh do
+        for _ = 0 to cycles_per_refresh do
           Cpu.tick cpu
         done)
     in

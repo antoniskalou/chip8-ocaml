@@ -23,8 +23,6 @@
   (libraries chip8 tsdl))
 
 (env
-  (dev
-    (flags (:standard -warn-error -A)))
   (release
     (ocamlopt_flags
      (:standard -O2 -ccopt -static -ccopt -s))))
