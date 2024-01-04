@@ -41,8 +41,12 @@ let audio_thread device_id ~state =
         | Ok () -> ()
         | Error (`Msg e) -> failwith e)
     end;
-    (* wait for the device to drain, based off SDL_RunAudio *)
-    Thread.delay Float.(of_int samples /. of_int freq)
+    (* fill the buffer a bit more than needed, it seems to reduce
+       crackling/stuttering *)
+    let queue_size = Sdl.get_queued_audio_size device_id in
+    if queue_size > samples * 2 then
+      (* wait for the device to drain, based off SDL_RunAudio *)
+      Thread.delay Float.(of_int samples /. of_int freq)
   done
 
 let default_freq = 44100

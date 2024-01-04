@@ -7,5 +7,6 @@ bin: [
   "_build/install/default/bin/chip8"
 ]
 doc: [
+  "_build/install/default/doc/chip8/LICENSE"
   "_build/install/default/doc/chip8/README.md"
 ]
