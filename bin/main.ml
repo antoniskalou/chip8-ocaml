@@ -100,12 +100,32 @@ let handle_event cpu =
 
 let seconds_to_ms s = Int32.of_float (s *. 1000.)
 
+let print_license () =
+  print_endline {|
+    Chip8 virtual machine written in OCaml
+    Copyright (C) 2024 Antonis Kalou
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  |}
+
 let () =
   let argv = Sys.argv in
   if Array.length argv < 2 then begin
     Printf.eprintf "Usage: %s <ROM FILE>\n" Sys.executable_name;
     exit 2
   end;
+  print_license ();
   init_sdl2 ();
   let rom = Rom.load argv.(1) in
   let memory = Memory.create () in
