@@ -20,7 +20,7 @@ let clear { buffer; _ } =
 
 let draw t ~memory ~i ~x ~y ~rows =
   let f_flag = ref Uint8.zero in
-  for y_line = 0 to Uint8.to_int rows - 1 do
+  for y_line = 0 to rows - 1 do
     let pixels =
       Memory.read_uint8 memory ~pos:Uint16.(i + of_int y_line)
       |> Uint8.to_int

@@ -210,6 +210,7 @@ let execute t instruction =
   | Draw (vx, vy, rows) ->
     let x = read_register vx |> Uint8.to_int in
     let y = read_register vy |> Uint8.to_int in
+    let rows = Uint8.to_int rows in
     let f_flag =
       Screen.draw t.screen ~memory:t.memory ~i:t.i ~x ~y ~rows
     in
