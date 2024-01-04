@@ -156,7 +156,6 @@ let execute t instruction =
        see https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#fx1e-add-to-index *)
     if t.i >= Uint16.of_int 0x1000
     then t.registers.(0xF) <- Uint8.one;
-    (* TODO: figure out if we should reset the flag back to 0 *)
   | Add_vx_to_vy (vx, vy) ->
     let x = read_register vx in
     let y = read_register vy in
