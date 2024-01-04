@@ -168,7 +168,7 @@ let () =
   Memory.load memory ~src:Fonts.fonts ~pos:Uint16.zero;
   Memory.load memory ~src:rom ~pos:Memory.rom_base_address;
   let cpu = Cpu.create memory in
-  let buzzer = Buzzer.create { volume = 0.2; frequency = 150. } |> or_exit in
+  let buzzer = Buzzer.create { volume = 0.01; frequency = 150. } |> or_exit in
   let renderer = init_graphics config in
   while true do
     handle_event cpu;

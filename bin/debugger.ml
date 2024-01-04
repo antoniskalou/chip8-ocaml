@@ -105,14 +105,13 @@ let execute_command ~cpu ~debug_state =
     let look_at = Option.value ~default:cpu.pc look_at_opt in
     list_code ~look_at ~pc:cpu.pc ~memory:cpu.memory
   | List_breakpoints ->
-    if List.is_empty debug_state.breakpoints then
-      Printf.printf "No breakpoints set.\n%!"
-    else (
-      debug_state.breakpoints
-      |> List.sort Uint16.compare
-      |> List.iteri (fun i b ->
-          Printf.printf "%i: %04X\n%!" i (Uint16.to_int b))
-    )
+    (match debug_state.breakpoints with
+     | [] -> Printf.printf "No breakpoints set.\n%!"
+     | xs ->
+       xs
+       |> List.sort Uint16.compare
+       |> List.iteri (fun i b ->
+           Printf.printf "%i: %04X\n%!" i (Uint16.to_int b)))
   | Breakpoint addr ->
     (* TODO: ensure breakpoint is actually byte aligned *)
     debug_state.breakpoints <- addr :: debug_state.breakpoints
@@ -120,7 +119,7 @@ let execute_command ~cpu ~debug_state =
     set_value_in_memory ~memory:cpu.memory addr value
   | Load_file (addr, filename) ->
     (try
-      let contents = In_channel.with_open_text filename In_channel.input_lines in
+      let contents = In_channel.with_open_text filename Util.input_lines in
       contents |> List.iteri (fun i opcode ->
         let offset = i * 2 in
         let addr' = Uint16.(addr + of_int offset) in

@@ -263,7 +263,7 @@ let execute t instruction =
       let pos = Uint16.(t.i + (of_int n)) in
       Memory.write_uint8 t.memory ~pos x)
   | Wait_until_pressed vx ->
-    (match Array.find_index Fun.id t.keys with
+    (match Util.find_index Fun.id t.keys with
     | Some i -> write_register vx (Uint8.of_int i)
     (* keep looping *)
     | None -> t.pc <- Uint16.(t.pc - of_int 2))
