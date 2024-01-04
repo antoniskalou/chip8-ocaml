@@ -6,8 +6,11 @@ A chip-8 virtual machine written in OCaml.
 
 - Originally inspired by [caml8](https://github.com/linoscope/caml8), then I
 did my own thing.
-- The buzzer sound comes from [here](https://freesound.org/people/LittleRobotSoundFactory/sounds/270324/),
-I couldn't be bothered sampling a sine wave.
+- [This excellent guide](https://tobiasvl.github.io/blog/write-a-chip-8-emulator)
+
+## Known Issues
+
+- [ ] Audio sometimes stutters when it starts playing.
 
 ## License
 
