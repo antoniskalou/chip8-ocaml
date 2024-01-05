@@ -1,10 +1,10 @@
 open Stdint
 
 let to_uint8 (n1: int) (n2: int): uint8 =
-  Uint8.of_int ((n1 lsl 4) + n2)
+  Uint8.of_int ((n1 lsl 4) lor n2)
 
 let to_uint16 (n1: int) (n2: int) (n3: int): uint16 =
-  Uint16.of_int ((n1 lsl 8) + (n2 lsl 4) + n3)
+  Uint16.of_int ((n1 lsl 8) lor (n2 lsl 4) lor n3)
 
 let of_uint8 (x: uint8) : int * int =
   let x = Uint8.to_int x in
