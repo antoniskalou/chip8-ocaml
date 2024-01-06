@@ -105,7 +105,7 @@ let decode opcode =
   | (0xA, n1, n2, n3) -> Set_index (Nibbles.to_uint16 n1 n2 n3)
   | (0xB, n1, n2, n3) -> JumpV0 (Nibbles.to_uint16 n1 n2 n3)
   | (0xC, x, n1, n2) -> Random (u8 x, Nibbles.to_uint8 n1 n2)
-  | (0xD, x, y, n) -> Draw (u8 x, Uint8.of_int y, Uint8.of_int n)
+  | (0xD, x, y, n) -> Draw (u8 x, u8 y, u8 n)
   | (0xE, x, 0xA, 0x1) -> Skip_if_not_pressed (u8 x)
   | (0xE, x, 0x9, 0xE) -> Skip_if_pressed (u8 x)
   | (0xF, x, 0x0, 0x7) -> Read_delay (u8 x)
@@ -231,12 +231,10 @@ let execute t instruction =
     if x <> y then skip () else ()
   | Skip_if_pressed vx ->
     let x = read_register vx in
-    let key = t.keys.(Uint8.to_int x) in
-    if key then t.pc <- Uint16.(t.pc + of_int 2)
+    if t.keys.(Uint8.to_int x) then skip ()
   | Skip_if_not_pressed vx ->
     let x = read_register vx in
-    let key = t.keys.(Uint8.to_int x) in
-    if not key then t.pc <- Uint16.(t.pc + of_int 2)
+    if not t.keys.(Uint8.to_int x) then skip ()
   | Jump addr ->
     t.pc <- addr
   | JumpV0 addr ->

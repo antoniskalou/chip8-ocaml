@@ -27,7 +27,6 @@ let draw t ~memory ~i ~x ~y ~rows =
     in
     for x_line = 0 to 7 do
       if (pixels land (0b1000_0000 lsr x_line)) <> 0 then begin
-        (* TODO: get screen w/h from t *)
         let x' = (x + x_line) mod t.width in
         let y' = (y + y_line) mod t.height in
         (* pixel index in 1d screen array *)
